@@ -1,0 +1,12 @@
+{
+  "name": "backlog-manager",
+  "version": "1.0.0",
+  "description": "Local-first backlog management app",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^5.1.0"
+  }
+}

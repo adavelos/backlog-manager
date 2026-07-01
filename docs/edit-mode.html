@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Backlog Quick Edit Titles</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      margin: 0;
+      padding: 24px;
+      background: #f5f5f7;
+      color: #111827;
+      display: flex;
+      justify-content: center;
+    }
+    .quick-edit-shell {
+      width: 100%;
+      max-width: 900px;
+    }
+    .quick-edit-container {
+      background: #f9fafb;
+      border-radius: 8px;
+      border: 1px solid #e5e7eb;
+      padding: 8px;
+      font-size: 12px;
+      box-shadow: 0 10px 20px rgba(15, 23, 42, 0.08);
+    }
+    .quick-edit-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 4px;
+    }
+    .quick-edit-header span {
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .quick-edit-table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+    }
+    .quick-edit-table thead {
+      background: #e5e7eb;
+    }
+    .quick-edit-table th,
+    .quick-edit-table td {
+      border-bottom: 1px solid #e5e7eb;
+      padding: 4px 6px;
+      text-align: left;
+      font-size: 11px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .quick-edit-table th {
+      font-weight: 600;
+      color: #4b5563;
+    }
+    .quick-edit-table tr:hover td {
+      background: #eef2ff;
+    }
+
+    .qe-row-handle {
+      font-size: 10px;
+      color: #9ca3af;
+      cursor: grab;
+      user-select: none;
+    }
+    tr.qe-row-dragging td {
+      background: #e5e7eb !important;
+      opacity: 0.7;
+    }
+
+    .qe-cell-editable {
+      cursor: pointer;
+    }
+    .qe-cell-input {
+      width: 100%;
+      box-sizing: border-box;
+      font-size: 11px;
+      padding: 2px 4px;
+      border-radius: 4px;
+      border: 1px solid #d1d5db;
+    }
+  </style>
+</head>
+<body>
+<div class="quick-edit-shell">
+  <div class="quick-edit-container">
+    <div class="quick-edit-header">
+      <span>Quick Edit – Titles (Project: Core Analyzer)</span>
+      <span style="font-size:11px;color:#6b7280;">
+        Drag rows to reorder. Double-click title to edit. TAB moves to next row.
+      </span>
+    </div>
+
+    <table class="quick-edit-table" id="quickEditTable">
+      <thead>
+        <tr>
+          <th style="width:5%;">#</th>
+          <th style="width:15%;">ID</th>
+          <th style="width:80%;">Title</th>
+        </tr>
+      </thead>
+      <tbody id="quickEditBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  // In your app, swap this with data.items
+  const sampleItems = [
+    {
+      id: "item-1",
+      title: "Refactor symbol resolution for multi-module with complex project structure"
+    },
+    {
+      id: "item-2",
+      title: "Bug: NPE on missing classpath entry when scanning external jars"
+    },
+    {
+      id: "item-3",
+      title: "UI: Show usages graph for selected symbol across modules"
+    }
+  ];
+
+  const tbody = document.getElementById("quickEditBody");
+  let editingCell = null;
+  let draggedRowIndex = null;
+
+  function renderRows() {
+    tbody.innerHTML = "";
+    sampleItems.forEach((item, rowIndex) => {
+      const tr = document.createElement("tr");
+      tr.dataset.rowIndex = rowIndex;
+      tr.draggable = true;
+
+      // Drag handle / row index
+      const tdHandle = document.createElement("td");
+      const handle = document.createElement("span");
+      handle.className = "qe-row-handle";
+      handle.textContent = String(rowIndex + 1);
+      tdHandle.appendChild(handle);
+      tr.appendChild(tdHandle);
+
+      // ID (non-editable)
+      const tdId = document.createElement("td");
+      tdId.textContent = item.id;
+      tdId.title = item.id;
+      tr.appendChild(tdId);
+
+      // Title (editable, single-line, truncated, tooltip)
+      const tdTitle = document.createElement("td");
+      tdTitle.textContent = item.title;
+      tdTitle.title = item.title;
+      tdTitle.classList.add("qe-cell-editable");
+      tdTitle.dataset.editField = "title";
+      tr.appendChild(tdTitle);
+
+      // Drag & drop row reordering
+      tr.addEventListener("dragstart", (ev) => {
+        draggedRowIndex = rowIndex;
+        tr.classList.add("qe-row-dragging");
+        ev.dataTransfer.effectAllowed = "move";
+        ev.dataTransfer.setData("text/plain", String(rowIndex));
+      });
+      tr.addEventListener("dragend", () => {
+        tr.classList.remove("qe-row-dragging");
+        draggedRowIndex = null;
+      });
+      tr.addEventListener("dragover", (ev) => {
+        ev.preventDefault();
+      });
+      tr.addEventListener("drop", (ev) => {
+        ev.preventDefault();
+        const fromIndex = draggedRowIndex;
+        const toIndex = parseInt(tr.dataset.rowIndex, 10);
+        if (fromIndex === null || isNaN(toIndex) || fromIndex === toIndex) return;
+        const [moved] = sampleItems.splice(fromIndex, 1);
+        sampleItems.splice(toIndex, 0, moved);
+        renderRows();
+      });
+
+      tbody.appendChild(tr);
+    });
+  }
+
+  function startEditCell(td) {
+    if (editingCell === td) return;
+    cancelEditCell();
+
+    const rowIndex = parseInt(td.parentElement.dataset.rowIndex, 10);
+    if (isNaN(rowIndex)) return;
+
+    const field = td.dataset.editField || "title";
+    const item = sampleItems[rowIndex];
+    const initialValue = item[field];
+
+    const input = document.createElement("input");
+    input.type = "text";
+    input.className = "qe-cell-input";
+    input.value = initialValue || "";
+    td.textContent = "";
+    td.appendChild(input);
+    editingCell = td;
+
+    input.focus();
+    input.select();
+
+    input.addEventListener("keydown", (ev) => {
+      if (ev.key === "Enter") {
+        commitEditCell(td, input.value);
+        ev.preventDefault();
+      } else if (ev.key === "Escape") {
+        cancelEditCell();
+        ev.preventDefault();
+      } else if (ev.key === "Tab") {
+        commitEditCell(td, input.value);
+        ev.preventDefault();
+        focusNextRowTitle(td, !ev.shiftKey);
+      }
+    });
+
+    input.addEventListener("blur", () => {
+      commitEditCell(td, input.value);
+    });
+  }
+
+  function commitEditCell(td, value) {
+    if (!editingCell || editingCell !== td) return;
+    const rowIndex = parseInt(td.parentElement.dataset.rowIndex, 10);
+    const item = sampleItems[rowIndex];
+    const field = td.dataset.editField || "title";
+
+    item[field] = value;
+    td.textContent = value;
+    td.title = value;
+    editingCell = null;
+  }
+
+  function cancelEditCell() {
+    if (!editingCell) return;
+    const td = editingCell;
+    const rowIndex = parseInt(td.parentElement.dataset.rowIndex, 10);
+    const item = sampleItems[rowIndex];
+    const field = td.dataset.editField || "title";
+    const value = item[field];
+    td.textContent = value || "";
+    td.title = value || "";
+    editingCell = null;
+  }
+
+  function focusNextRowTitle(currentTd, forward = true) {
+    const row = currentTd.parentElement;
+    const rowIndex = parseInt(row.dataset.rowIndex, 10);
+    let nextRow = null;
+
+    if (forward) {
+      nextRow = tbody.querySelector(`tr[data-row-index="${rowIndex + 1}"]`);
+    } else {
+      nextRow = tbody.querySelector(`tr[data-row-index="${rowIndex - 1}"]`);
+    }
+
+    if (nextRow) {
+      const nextTitleCell = nextRow.querySelector('td[data-edit-field="title"]');
+      if (nextTitleCell) startEditCell(nextTitleCell);
+    }
+  }
+
+  tbody.addEventListener("dblclick", (ev) => {
+    const td = ev.target.closest("td");
+    if (!td || !td.classList.contains("qe-cell-editable")) return;
+    startEditCell(td);
+  });
+
+  renderRows();
+</script>
+</body>
+</html>

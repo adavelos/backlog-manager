@@ -1,0 +1,144 @@
+/* ============================================
+   Backlog Manager — Projects-specific Styles
+   ============================================ */
+
+/* --- Management layout ------------------------------------------ */
+.manage-layout {
+  flex: 1;
+  min-height: 0;
+  padding: 16px 28px 18px;
+  display: flex;
+  gap: 16px;
+  overflow: hidden;
+  background: var(--bg-canvas);
+  background-image: radial-gradient(circle at 50% 0%, rgba(99,102,241,0.03) 0%, transparent 50%);
+}
+
+.manage-column {
+  flex: 1;
+  background: var(--bg-surface);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-light);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  max-height: 100%;
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.manage-column:hover {
+  box-shadow: var(--shadow-md);
+  border-color: var(--slate-300);
+}
+
+.manage-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.manage-list {
+  flex: 1;
+  overflow-y: auto;
+  font-size: 12px;
+}
+
+.manage-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.manage-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.manage-list::-webkit-scrollbar-thumb {
+  background: var(--slate-300);
+  border-radius: 99px;
+}
+
+/* --- Manage list items ------------------------------------------ */
+.manage-item {
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  margin-bottom: 4px;
+  cursor: pointer;
+  transition: all 0.12s ease;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.manage-item:hover {
+  background: var(--slate-50);
+  border-color: var(--border-light);
+}
+
+.manage-item.selected {
+  background: var(--indigo-50);
+  border-color: var(--indigo-200);
+  color: var(--indigo-700);
+}
+
+.manage-item-title {
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.manage-item-content {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.manage-item-desc {
+  font-size: 11px;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-top: 1px;
+}
+
+.manage-item-actions {
+  display: flex;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+
+.manage-item:hover .manage-item-actions {
+  opacity: 1;
+}
+
+.manage-item-action {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+  color: var(--text-muted);
+  font-size: 13px;
+  transition: all 0.12s;
+}
+
+.manage-item-action:hover {
+  background: var(--slate-200);
+  color: var(--text-primary);
+}
+
+.manage-item-action.danger:hover {
+  background: var(--red-100);
+  color: var(--red-600);
+}

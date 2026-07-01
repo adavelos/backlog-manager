@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Projects &mdash; Backlog Manager</title>
+  <link rel="icon" type="image/svg+xml" href="img/icon.svg?v=1">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/common.css">
+  <link rel="stylesheet" href="css/projects.css">
+</head>
+<body>
+  <div class="app-shell">
+    <!-- Header (shared partial) -->
+    <header class="app-header">
+      <div class="app-brand">
+        <div>
+          <img src="img/icon.svg" alt="Backlog Manager" width="22" height="22">
+        </div>
+        <div class="app-title">Backlog Manager</div>
+      </div>
+      <div class="app-main-nav">
+        <a href="boards.html" class="nav-pill">Boards</a>
+        <a href="projects.html" class="nav-pill active">Projects</a>
+        <a href="notes.html" class="nav-pill">Notes</a>
+      </div>
+      <div class="header-type-toggle" id="headerTypeToggle">
+        <span class="toggle-label toggle-label-left" data-type="work">Work</span>
+        <div class="toggle-track">
+          <div class="toggle-knob" id="toggleKnob"></div>
+        </div>
+        <span class="toggle-label toggle-label-right" data-type="argonath">Argonath</span>
+      </div>
+    </header>
+
+    <!-- Main layout -->
+    <div class="layout">
+      <!-- Projects & Releases management view -->
+      <div class="manage-layout">
+        <div class="manage-column" id="projectsManageColumn">
+          <div class="manage-header">
+            <span>Projects</span>
+            <button class="btn-outline" id="addProjectBtn">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Add project
+            </button>
+          </div>
+          <div class="manage-list" id="projectsManageList"></div>
+        </div>
+        <div class="manage-column" id="releasesManageColumn">
+          <div class="manage-header">
+            <span id="releasesManageTitle">Releases</span>
+            <button class="btn-outline" id="addReleaseBtn">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Add release
+            </button>
+          </div>
+          <div class="manage-list" id="releasesManageList"></div>
+        </div>
+      </div>
+
+      <!-- Status bar (shared partial) -->
+      <div class="status-bar" id="statusBar">
+        <div class="status-left">
+          <div class="status-indicator" id="statusIndicator"></div>
+          <span id="statusDataFile">Data file: (loading...)</span>
+        </div>
+        <div class="status-right">
+          <span id="statusLastSync">Last sync: &mdash;</span>
+          <button class="btn-inline" id="syncNowBtn">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="23 4 23 10 17 10"/>
+              <polyline points="1 20 1 14 7 14"/>
+              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+            </svg>
+            Sync now
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Custom modal dialog -->
+  <div class="modal-overlay hidden" id="modalOverlay">
+    <div class="modal-dialog" id="modalDialog">
+      <div class="modal-header" id="modalHeader"></div>
+      <div class="modal-body">
+        <p class="modal-message" id="modalMessage"></p>
+        <input class="modal-input hidden" id="modalInput" type="text" placeholder="">
+      </div>
+      <div class="modal-footer" id="modalFooter"></div>
+    </div>
+  </div>
+
+  <script src="js/common.js"></script>
+  <script src="js/projects.js"></script>
+</body>
+</html>

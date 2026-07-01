@@ -1,0 +1,17 @@
+node_modules/
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+
+# Env
+.env
+.env.local
+
+# Claude Code local state
+.claude/scheduled_tasks.lock

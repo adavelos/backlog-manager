@@ -1,0 +1,2433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Backlog Manager</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #f5f5f7;
+      color: #111827;
+    }
+    header {
+      padding: 8px 16px;
+      background: #111827;
+      color: #f9fafb;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    header h1 {
+      margin: 0;
+      font-size: 18px;
+      white-space: nowrap;
+    }
+    .nav-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+    }
+    .nav-label {
+      font-size: 12px;
+      color: #d1d5db;
+    }
+    .nav-buttons {
+      display: inline-flex;
+      border-radius: 999px;
+      overflow: hidden;
+      border: 1px solid #4b5563;
+    }
+    .nav-button {
+      padding: 4px 10px;
+      font-size: 12px;
+      cursor: pointer;
+      border: none;
+      background: #111827;
+      color: #e5e7eb;
+    }
+    .nav-button.active {
+      background: #2563eb;
+      color: #f9fafb;
+    }
+    select {
+      padding: 3px 6px;
+      font-size: 12px;
+      border-radius: 4px;
+      border: 1px solid #4b5563;
+      background: #111827;
+      color: #f9fafb;
+    }
+    select:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .layout {
+      display: flex;
+      flex-direction: column;
+      height: calc(100vh - 60px);
+    }
+
+    .filters-panel {
+      padding: 8px 16px;
+      border-bottom: 1px solid #e5e7eb;
+      background: #f9fafb;
+    }
+
+    .chip-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 6px;
+    }
+
+    .chip {
+      padding: 3px 8px;
+      border-radius: 999px;
+      border: 1px solid #d1d5db;
+      background: #fff;
+      cursor: pointer;
+      font-size: 12px;
+    }
+    .chip.active {
+      background: #2563eb;
+      color: #fff;
+      border-color: #1d4ed8;
+    }
+    .chip.disabled {
+      opacity: 0.4;
+      cursor: default;
+    }
+
+    .board {
+      flex: 1;
+      display: flex;
+      gap: 12px;
+      padding: 12px 16px 16px 16px;
+      overflow-x: auto;
+    }
+
+    .column {
+      flex: 1 0 220px;
+      background: #f9fafb;
+      border-radius: 8px;
+      border: 1px solid #e5e7eb;
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      max-height: 100%;
+    }
+    .column-header {
+      font-size: 13px;
+      font-weight: 600;
+      padding: 4px 0 8px 0;
+      border-bottom: 1px solid #e5e7eb;
+      margin-bottom: 4px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+    .column-header span.count {
+      font-size: 11px;
+      color: #6b7280;
+    }
+    .column-header button {
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 999px;
+      border: 1px solid #d1d5db;
+      background: #fff;
+      cursor: pointer;
+    }
+    .column-dropzone {
+      flex: 1;
+      overflow-y: auto;
+      padding-top: 4px;
+    }
+
+    .item {
+      background: #fff;
+      border-radius: 6px;
+      border: 1px solid #e5e7eb;
+      padding: 6px 8px;
+      margin-bottom: 6px;
+      cursor: grab;
+      font-size: 12px;
+    }
+    .item.dragging {
+      opacity: 0.5;
+      border-style: dashed;
+    }
+    .item-title {
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    .item-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-bottom: 4px;
+      align-items: center;
+    }
+    .badge {
+      font-size: 10px;
+      padding: 1px 6px;
+      border-radius: 999px;
+      border: 1px solid #d1d5db;
+    }
+    .badge.priority-LOW { background: #e5e7eb; color: #374151; }
+    .badge.priority-MEDIUM { background: #bfdbfe; color: #1e3a8a; }
+    .badge.priority-HIGH { background: #fed7aa; color: #9a3412; }
+    .badge.priority-CRITICAL { background: #fecaca; color: #7f1d1d; }
+
+    .badge.type-BUG { background: #fee2e2; color: #991b1b; }
+    .badge.type-FEATURE { background: #dcfce7; color: #166534; }
+
+    .badge.state-BACKLOG { background: #e5e7eb; color: #374151; }
+    .badge.state-TODO { background: #dbeafe; color: #1d4ed8; }
+    .badge.state-ONGOING { background: #fef3c7; color: #92400e; }
+    .badge.state-DONE { background: #dcfce7; color: #166534; }
+
+    .tag-pill {
+      font-size: 10px;
+      padding: 1px 6px;
+      border-radius: 999px;
+      background: #e5e7eb;
+      color: #374151;
+    }
+
+    .item-footer {
+      font-size: 10px;
+      color: #6b7280;
+      display: flex;
+      justify-content: space-between;
+      margin-top: 4px;
+      gap: 4px;
+      flex-wrap: wrap;
+    }
+    .item-footer span {
+      max-width: 33%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .prompt-indicator {
+      font-size: 10px;
+      color: #2563eb;
+      margin-left: auto;
+    }
+    .steps-indicator {
+      font-size: 10px;
+      color: #10b981;
+    }
+
+    .bottom-bar {
+      padding: 6px 16px;
+      border-top: 1px solid #e5e7eb;
+      background: #f9fafb;
+      font-size: 11px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+    .link {
+      color: #2563eb;
+      cursor: pointer;
+      text-decoration: underline;
+    }
+
+    /* Modal */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.3);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 40;
+    }
+    .modal-overlay.open {
+      display: flex;
+    }
+    .modal {
+      background: #fff;
+      border-radius: 8px;
+      padding: 16px;
+      width: 620px;
+      max-width: 95vw;
+      max-height: 80vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 40px rgba(15, 23, 42, 0.25);
+      font-size: 12px;
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .modal-header h2 {
+      margin: 0;
+      font-size: 14px;
+    }
+    .modal-close {
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    .modal-body {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px 16px;
+      margin-bottom: 12px;
+    }
+    .modal-body-full {
+      grid-column: 1 / -1;
+    }
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+    .modal label {
+      display: block;
+      font-size: 11px;
+      margin-bottom: 2px;
+      color: #4b5563;
+    }
+    .modal input,
+    .modal select,
+    .modal textarea {
+      width: 100%;
+      box-sizing: border-box;
+      font-size: 12px;
+      padding: 4px 6px;
+      border-radius: 4px;
+      border: 1px solid #d1d5db;
+      resize: vertical;
+    }
+    .modal textarea {
+      min-height: 60px;
+    }
+    .btn {
+      padding: 4px 10px;
+      font-size: 12px;
+      border-radius: 4px;
+      border: 1px solid #d1d5db;
+      cursor: pointer;
+      background: #f9fafb;
+    }
+    .btn-primary {
+      background: #2563eb;
+      color: #fff;
+      border-color: #1d4ed8;
+    }
+
+    /* Subitems checklist */
+    .subitems-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 4px;
+      font-size: 11px;
+    }
+    .subitems-list {
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      padding: 4px;
+      max-height: 160px;
+      overflow-y: auto;
+      background: #f9fafb;
+    }
+    .subitem-row {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 4px;
+      border-radius: 4px;
+      cursor: default;
+    }
+    .subitem-row.dragging {
+      background: #e5e7eb;
+    }
+    .subitem-handle {
+      width: 10px;
+      font-size: 10px;
+      cursor: grab;
+      color: #9ca3af;
+      user-select: none;
+    }
+    .subitem-title-input {
+      flex: 1;
+      box-sizing: border-box;
+      font-size: 11px;
+      padding: 2px 4px;
+      border-radius: 4px;
+      border: 1px solid #d1d5db;
+    }
+    .subitem-actions {
+      display: flex;
+      gap: 4px;
+    }
+    .subitem-actions button {
+      border: none;
+      background: transparent;
+      font-size: 10px;
+      cursor: pointer;
+      color: #6b7280;
+      padding: 0 3px;
+    }
+    .subitem-actions button:hover {
+      color: #111827;
+    }
+    .subitems-add {
+      margin-top: 4px;
+      font-size: 11px;
+    }
+
+    /* Management page */
+    .manage-layout {
+      display: flex;
+      flex: 1;
+      padding: 12px 16px;
+      gap: 16px;
+      overflow: hidden;
+    }
+    .manage-column {
+      flex: 1;
+      background: #f9fafb;
+      border-radius: 8px;
+      border: 1px solid #e5e7eb;
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      max-height: 100%;
+    }
+    .manage-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 4px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .manage-header button {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      border: 1px solid #d1d5db;
+      background: #fff;
+      cursor: pointer;
+    }
+    .manage-list {
+      flex: 1;
+      overflow-y: auto;
+      margin-top: 4px;
+      font-size: 11px;
+    }
+    .manage-row {
+      padding: 4px 6px;
+      border-radius: 4px;
+      border: 1px solid #e5e7eb;
+      margin-bottom: 4px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .manage-row-title {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+    .manage-row-title span.name {
+      font-weight: 600;
+    }
+    .manage-row {
+      cursor: pointer;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .manage-row:hover {
+      border-color: #2563eb;
+      box-shadow: 0 0 0 1px #2563eb;
+    }
+    .manage-row.selected {
+      border-color: #2563eb;
+      background: #eff6ff;
+    }
+    .manage-row-actions {
+      display: flex;
+      gap: 4px;
+    }
+    .manage-row-actions button {
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      border: 1px solid #d1d5db;
+      background: #fff;
+      cursor: pointer;
+      color: #374151;
+      transition: background 0.1s, border-color 0.1s;
+    }
+    .manage-row-actions button:hover {
+      background: #f3f4f6;
+      border-color: #9ca3af;
+    }
+    .manage-row-actions button.delete {
+      color: #b91c1c;
+      border-color: #fecaca;
+    }
+    .manage-row-actions button.delete:hover {
+      background: #fef2f2;
+      border-color: #fca5a5;
+    }
+
+    /* --- Quick edit mode --- */
+    .qe-toggle-bar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 6px 16px;
+      border-bottom: 1px solid #e5e7eb;
+      background: #f9fafb;
+    }
+    .qe-toggle-label {
+      font-size: 12px;
+      color: #6b7280;
+      white-space: nowrap;
+    }
+    .qe-toggle-hint {
+      font-size: 11px;
+      color: #9ca3af;
+      margin-left: auto;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .qe-view {
+      flex: 1;
+      padding: 8px 16px 16px 16px;
+      overflow-y: auto;
+    }
+    .qe-container {
+      background: #f9fafb;
+      border-radius: 8px;
+      border: 1px solid #e5e7eb;
+      padding: 8px;
+      font-size: 12px;
+    }
+    .qe-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 4px;
+    }
+    .qe-header span {
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .qe-table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+    }
+    .qe-table thead {
+      background: #e5e7eb;
+    }
+    .qe-table th,
+    .qe-table td {
+      border-bottom: 1px solid #e5e7eb;
+      padding: 4px 6px;
+      text-align: left;
+      font-size: 11px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .qe-table th {
+      font-weight: 600;
+      color: #4b5563;
+    }
+    .qe-table tbody tr:hover td {
+      background: #eef2ff;
+    }
+    .qe-row-handle {
+      font-size: 10px;
+      color: #9ca3af;
+      cursor: grab;
+      user-select: none;
+    }
+    .qe-row-dragging td {
+      background: #e5e7eb !important;
+      opacity: 0.7;
+    }
+    .qe-cell-editable {
+      cursor: pointer;
+    }
+    .qe-cell-input {
+      width: 100%;
+      box-sizing: border-box;
+      font-size: 11px;
+      padding: 2px 4px;
+      border-radius: 4px;
+      border: 1px solid #d1d5db;
+    }
+    .qe-badge {
+      display: inline-block;
+      font-size: 10px;
+      padding: 1px 6px;
+      border-radius: 999px;
+      border: 1px solid #d1d5db;
+    }
+    .qe-group {
+      margin-top: 12px;
+    }
+    .qe-group:first-child {
+      margin-top: 0;
+    }
+    .qe-group-label {
+      font-size: 12px;
+      font-weight: 600;
+      padding: 4px 6px;
+      margin-bottom: 2px;
+      color: #374151;
+    }
+    .qe-tbody.qe-drag-over {
+      outline: 2px dashed #2563eb;
+      outline-offset: -2px;
+      background: #eff6ff;
+      border-radius: 4px;
+    }
+    .qe-empty-row td {
+      cursor: default;
+    }
+    .qe-tbody.qe-drag-over .qe-empty-row td {
+      color: #2563eb !important;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+  </style>
+</head>
+<body>
+<header>
+  <h1>Backlog Manager</h1>
+  <div class="nav-group">
+    <span class="nav-label">Mode:</span>
+    <div class="nav-buttons">
+      <button class="nav-button active" id="modeBoardsBtn">Boards</button>
+      <button class="nav-button" id="modeManageBtn">Projects & Releases</button>
+    </div>
+
+    <span class="nav-label">Board:</span>
+    <div class="nav-buttons">
+      <button class="nav-button active" id="boardStateBtn">State</button>
+      <button class="nav-button" id="boardReleaseBtn">Release</button>
+    </div>
+
+    <span class="nav-label">Project:</span>
+    <select id="projectSelect"></select>
+  </div>
+</header>
+
+<div class="layout">
+
+  <!-- Filters panel (boards mode only) -->
+  <div class="filters-panel" id="filtersPanel">
+    <div>
+      <strong>Tags:</strong>
+      <div id="tagChips" class="chip-bar"></div>
+    </div>
+    <div style="margin-top:8px;">
+      <strong>Releases:</strong>
+      <div id="releaseChips" class="chip-bar"></div>
+      <div id="releaseChipsHint" style="font-size:11px;color:#6b7280;margin-top:2px;"></div>
+    </div>
+  </div>
+
+  <!-- Quick edit toggle bar -->
+  <div class="qe-toggle-bar" id="qeToggleBar">
+    <span class="qe-toggle-label">View:</span>
+    <div class="nav-buttons">
+      <button class="nav-button active" id="qeModeNormal">Board</button>
+      <button class="nav-button" id="qeModeQuick">Quick Edit</button>
+    </div>
+    <span class="qe-toggle-hint" id="qeToggleHint">Double-click title to edit. Enter to commit, Tab to next row, Esc to cancel.</span>
+  </div>
+
+  <!-- Boards view -->
+  <div class="board" id="boardsView">
+    <!-- Columns are rendered dynamically -->
+  </div>
+
+  <!-- Quick edit view (hidden by default) -->
+  <div class="qe-view hidden" id="qeView"></div>
+
+  <!-- Management view -->
+  <div class="manage-layout hidden" id="manageView">
+    <div class="manage-column" id="projectsManageColumn">
+      <div class="manage-header">
+        <span>Projects</span>
+        <button id="addProjectBtn">+ Add project</button>
+      </div>
+      <div class="manage-list" id="projectsManageList"></div>
+    </div>
+    <div class="manage-column" id="releasesManageColumn">
+      <div class="manage-header">
+        <span id="releasesManageTitle">Releases</span>
+        <button id="addReleaseBtn">+ Add release</button>
+      </div>
+      <div class="manage-list" id="releasesManageList"></div>
+    </div>
+  </div>
+
+  <div class="bottom-bar" id="bottomBar">
+    <span id="bottomHint">Click an item to view/edit details and subitems. Drag to change state or release.</span>
+    <span class="link" id="toggleArchive">Show archive DONE items</span>
+  </div>
+</div>
+
+<!-- Item modal -->
+<div class="modal-overlay" id="itemModalOverlay">
+  <div class="modal" id="itemModal">
+    <div class="modal-header">
+      <h2 id="modalTitle">Item</h2>
+      <button class="modal-close" id="modalCloseBtn">&times;</button>
+    </div>
+    <form id="itemForm">
+      <div class="modal-body">
+        <div>
+          <label for="fieldTitle">Title</label>
+          <input id="fieldTitle" name="title" />
+        </div>
+        <div>
+          <label for="fieldState">State</label>
+          <select id="fieldState" name="state">
+            <option value="BACKLOG">BACKLOG</option>
+            <option value="TODO">TODO</option>
+            <option value="ONGOING">ONGOING</option>
+            <option value="DONE">DONE</option>
+          </select>
+        </div>
+        <div>
+          <label for="fieldPriority">Priority</label>
+          <select id="fieldPriority" name="priority">
+            <option value="LOW">LOW</option>
+            <option value="MEDIUM">MEDIUM</option>
+            <option value="HIGH">HIGH</option>
+            <option value="CRITICAL">CRITICAL</option>
+          </select>
+        </div>
+        <div>
+          <label for="fieldType">Type</label>
+          <select id="fieldType" name="type">
+            <option value="BUG">BUG</option>
+            <option value="FEATURE">FEATURE</option>
+          </select>
+        </div>
+        <div class="modal-body-full">
+          <label for="fieldTags">Tags (comma-separated)</label>
+          <input id="fieldTags" name="tags" />
+        </div>
+        <div class="modal-body-full">
+          <label for="fieldFiles">Files affected (comma-separated)</label>
+          <input id="fieldFiles" name="filesAffected" />
+        </div>
+        <div class="modal-body-full">
+          <label for="fieldAnalysis">Analysis</label>
+          <textarea id="fieldAnalysis" name="analysis"></textarea>
+        </div>
+        <div class="modal-body-full">
+          <label for="fieldPrompt">Prompt</label>
+          <textarea id="fieldPrompt" name="prompt"></textarea>
+        </div>
+        <div class="modal-body-full">
+          <label for="fieldReport">Report</label>
+          <textarea id="fieldReport" name="report"></textarea>
+        </div>
+        <div>
+          <label for="fieldRelease">Release</label>
+          <select id="fieldRelease" name="release"></select>
+        </div>
+
+        <!-- Subitems -->
+        <div class="modal-body-full">
+          <div class="subitems-header">
+            <span>Subitems</span>
+            <span id="subitemsSummaryLabel"></span>
+          </div>
+          <div class="subitems-list" id="subitemsList"></div>
+          <div class="subitems-add">
+            <button type="button" class="btn" id="addSubitemBtn">+ Add subitem</button>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" id="modalCancelBtn">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Release modal -->
+<div class="modal-overlay" id="releaseModalOverlay">
+  <div class="modal" id="releaseModal">
+    <div class="modal-header">
+      <h2 id="releaseModalTitle">Release</h2>
+      <button class="modal-close" id="releaseModalCloseBtn">&times;</button>
+    </div>
+    <form id="releaseForm">
+      <div class="modal-body">
+        <div class="modal-body-full">
+          <label for="fieldReleaseName">Name</label>
+          <input id="fieldReleaseName" name="releaseName" />
+        </div>
+        <div>
+          <label for="fieldReleaseState">State</label>
+          <select id="fieldReleaseState" name="releaseState">
+            <option value="PLANNED">PLANNED</option>
+            <option value="ACTIVE">ACTIVE</option>
+            <option value="DONE">DONE</option>
+            <option value="ARCHIVED">ARCHIVED</option>
+          </select>
+        </div>
+        <div>
+          <label for="fieldReleaseNote">Note</label>
+          <input id="fieldReleaseNote" name="releaseNote" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" id="releaseModalCancelBtn">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  // --- Persistence & domain ---
+
+  const STORAGE_KEY = "backlog-manager-data-v2";
+  const STATE_ORDER = ["BACKLOG", "TODO", "ONGOING", "DONE"];
+  const PRIORITIES = ["LOW", "MEDIUM", "HIGH", "CRITICAL"];
+  const RELEASE_STATES = ["PLANNED", "ACTIVE", "DONE", "ARCHIVED"];
+
+  const sampleData = {
+    projects: [
+      {
+        id: "proj-core",
+        name: "Core Analyzer",
+        repoPath: "/home/user/dev/core-analyzer",
+        releases: [
+          {
+            id: "rel-core-1",
+            name: "R1",
+            state: "ACTIVE",
+            startDate: Date.now() - 5 * 24 * 3600 * 1000,
+            endDate: null,
+            note: "First core analyzer release."
+          },
+          {
+            id: "rel-core-2",
+            name: "R2",
+            state: "PLANNED",
+            startDate: null,
+            endDate: null,
+            note: ""
+          }
+        ]
+      },
+      {
+        id: "proj-ui",
+        name: "Backlog Manager UI",
+        repoPath: "/home/user/dev/backlog-manager",
+        releases: [
+          {
+            id: "rel-ui-1",
+            name: "UI R1",
+            state: "ACTIVE",
+            startDate: Date.now() - 3 * 24 * 3600 * 1000,
+            endDate: null,
+            note: "Initial UI version."
+          }
+        ]
+      }
+    ],
+    items: [
+      {
+        id: "item-1",
+        projectId: "proj-core",
+        releaseId: "rel-core-1",
+        title: "Refactor symbol resolution for multi-module",
+        tags: ["Infra", "BackEnd"],
+        priority: "HIGH",
+        type: "FEATURE",
+        state: "ONGOING",
+        analysis: "Existing resolver does not handle multi-module setups cleanly.",
+        filesAffected: ["core/symbols/Resolver.java"],
+        prompt: "Explain how to support multi-module symbol resolution without loading whole project.",
+        report: "",
+        createdAt: Date.now() - 3 * 24 * 3600 * 1000,
+        updatedAt: Date.now() - 2 * 24 * 3600 * 1000,
+        completedAt: null,
+        subitems: [
+          { id: "sub-1-1", title: "Inventory current resolver behavior", done: true },
+          { id: "sub-1-2", title: "Design multi-module resolution strategy", done: false },
+          { id: "sub-1-3", title: "Implement new resolver", done: false }
+        ]
+      },
+      {
+        id: "item-2",
+        projectId: "proj-core",
+        releaseId: null,
+        title: "Bug: NPE on missing classpath entry",
+        tags: ["BackEnd"],
+        priority: "CRITICAL",
+        type: "BUG",
+        state: "TODO",
+        analysis: "Null check missing when resolving external jars.",
+        filesAffected: ["core/classpath/ClasspathScanner.java"],
+        prompt: "Find safe pattern to handle partially configured classpath.",
+        report: "",
+        createdAt: Date.now() - 1 * 24 * 3600 * 1000,
+        updatedAt: Date.now() - 1 * 24 * 3600 * 1000,
+        completedAt: null,
+        subitems: []
+      },
+      {
+        id: "item-3",
+        projectId: "proj-core",
+        releaseId: "rel-core-2",
+        title: "UI: Show usages graph",
+        tags: ["UI"],
+        priority: "MEDIUM",
+        type: "FEATURE",
+        state: "BACKLOG",
+        analysis: "",
+        filesAffected: [],
+        prompt: "",
+        report: "",
+        createdAt: Date.now() - 5 * 24 * 3600 * 1000,
+        updatedAt: Date.now() - 5 * 24 * 3600 * 1000,
+        completedAt: null,
+        subitems: []
+      },
+      {
+        id: "item-4",
+        projectId: "proj-ui",
+        releaseId: "rel-ui-1",
+        title: "Add tag chips filter",
+        tags: ["UI"],
+        priority: "MEDIUM",
+        type: "FEATURE",
+        state: "DONE",
+        analysis: "Implemented multi-tag filter using chip toggles.",
+        filesAffected: ["ui/backlog.html", "ui/backlog.js"],
+        prompt: "Design tag chip UX for multi-select filters.",
+        report: "Chip bar with toggles; blue = active.",
+        createdAt: Date.now() - 9 * 24 * 3600 * 1000,
+        updatedAt: Date.now() - 8 * 24 * 3600 * 1000,
+        completedAt: Date.now() - 6 * 24 * 3600 * 1000,
+        subitems: [
+          { id: "sub-4-1", title: "List all tag values used", done: true },
+          { id: "sub-4-2", title: "Implement chip toggle logic", done: true }
+        ]
+      },
+      {
+        id: "item-5",
+        projectId: "proj-ui",
+        releaseId: null,
+        title: "DONE older than 7 days",
+        tags: ["UI"],
+        priority: "LOW",
+        type: "BUG",
+        state: "DONE",
+        analysis: "",
+        filesAffected: [],
+        prompt: "",
+        report: "",
+        createdAt: Date.now() - 20 * 24 * 3600 * 1000,
+        updatedAt: Date.now() - 19 * 24 * 3600 * 1000,
+        completedAt: Date.now() - 10 * 24 * 3600 * 1000,
+        subitems: []
+      }
+    ]
+  };
+
+  function loadData() {
+    try {
+      const raw = window.localStorage.getItem(STORAGE_KEY);
+      if (!raw) return structuredClone(sampleData);
+      return JSON.parse(raw);
+    } catch (e) {
+      console.warn("Failed to load data, using sample", e);
+      return structuredClone(sampleData);
+    }
+  }
+  function saveData() {
+    try {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    } catch (e) {
+      console.error("Failed to save data", e);
+    }
+  }
+
+  let data = loadData();
+
+  // --- UI state ---
+
+  let mode = "boards";          // "boards" | "manage"
+  let boardType = "state";      // "state" | "release"
+  let currentProjectId = "ALL"; // "ALL" or project id
+  let activeTags = new Set();
+  let activeReleaseFilterId = null; // null = all releases; special "NO_RELEASE" for backlog filter
+  let showArchiveDone = false;
+  let quickEditMode = false;
+
+  // Quick edit internals
+  let qeEditingCell = null;
+  let qeDraggedRowIndex = null;
+
+  let draggedItemId = null;
+  let modalItemId = null;
+  let modalReleaseProjectId = null;
+  let modalReleaseId = null;
+
+  // --- DOM refs ---
+
+  const modeBoardsBtn = document.getElementById("modeBoardsBtn");
+  const modeManageBtn = document.getElementById("modeManageBtn");
+  const boardStateBtn = document.getElementById("boardStateBtn");
+  const boardReleaseBtn = document.getElementById("boardReleaseBtn");
+  const projectSelectEl = document.getElementById("projectSelect");
+
+  const filtersPanelEl = document.getElementById("filtersPanel");
+  const tagChipsEl = document.getElementById("tagChips");
+  const releaseChipsEl = document.getElementById("releaseChips");
+  const releaseChipsHintEl = document.getElementById("releaseChipsHint");
+
+  const boardsViewEl = document.getElementById("boardsView");
+  const manageViewEl = document.getElementById("manageView");
+  const bottomBarEl = document.getElementById("bottomBar");
+  const bottomHintEl = document.getElementById("bottomHint");
+  const toggleArchiveEl = document.getElementById("toggleArchive");
+
+  const projectsManageListEl = document.getElementById("projectsManageList");
+  const releasesManageListEl = document.getElementById("releasesManageList");
+  const releasesManageTitleEl = document.getElementById("releasesManageTitle");
+  const addProjectBtn = document.getElementById("addProjectBtn");
+  const addReleaseBtn = document.getElementById("addReleaseBtn");
+
+  // Item modal
+  const itemModalOverlayEl = document.getElementById("itemModalOverlay");
+  const modalTitleEl = document.getElementById("modalTitle");
+  const modalCloseBtn = document.getElementById("modalCloseBtn");
+  const modalCancelBtn = document.getElementById("modalCancelBtn");
+  const itemFormEl = document.getElementById("itemForm");
+
+  const fieldTitle = document.getElementById("fieldTitle");
+  const fieldState = document.getElementById("fieldState");
+  const fieldPriority = document.getElementById("fieldPriority");
+  const fieldType = document.getElementById("fieldType");
+  const fieldTags = document.getElementById("fieldTags");
+  const fieldFiles = document.getElementById("fieldFiles");
+  const fieldAnalysis = document.getElementById("fieldAnalysis");
+  const fieldPrompt = document.getElementById("fieldPrompt");
+  const fieldReport = document.getElementById("fieldReport");
+  const fieldRelease = document.getElementById("fieldRelease");
+
+  const subitemsListEl = document.getElementById("subitemsList");
+  const subitemsSummaryLabelEl = document.getElementById("subitemsSummaryLabel");
+  const addSubitemBtn = document.getElementById("addSubitemBtn");
+
+  // Release modal
+  const releaseModalOverlayEl = document.getElementById("releaseModalOverlay");
+  const releaseModalTitleEl = document.getElementById("releaseModalTitle");
+  const releaseModalCloseBtn = document.getElementById("releaseModalCloseBtn");
+  const releaseModalCancelBtn = document.getElementById("releaseModalCancelBtn");
+  const releaseFormEl = document.getElementById("releaseForm");
+  const fieldReleaseName = document.getElementById("fieldReleaseName");
+  const fieldReleaseState = document.getElementById("fieldReleaseState");
+  const fieldReleaseNote = document.getElementById("fieldReleaseNote");
+
+  // Quick edit
+  const qeModeNormalBtn = document.getElementById("qeModeNormal");
+  const qeModeQuickBtn = document.getElementById("qeModeQuick");
+  const qeToggleHint = document.getElementById("qeToggleHint");
+  const qeViewEl = document.getElementById("qeView");
+  const qeToggleBarEl = document.getElementById("qeToggleBar");
+
+  // --- Helpers ---
+
+  function getAllProjects() {
+    return data.projects;
+  }
+  function findProjectById(id) {
+    return data.projects.find(p => p.id === id);
+  }
+  function getReleasesForProject(projectId) {
+    const project = findProjectById(projectId);
+    if (!project) return [];
+    return project.releases || [];
+  }
+  function findRelease(projectId, releaseId) {
+    const project = findProjectById(projectId);
+    if (!project) return null;
+    return (project.releases || []).find(r => r.id === releaseId) || null;
+  }
+  function getAllTags() {
+    const set = new Set();
+    data.items.forEach(item => {
+      (item.tags || []).forEach(t => set.add(t));
+    });
+    return Array.from(set).sort();
+  }
+  function daysAgo(timestamp) {
+    if (!timestamp) return null;
+    const ms = Date.now() - timestamp;
+    return Math.floor(ms / (24 * 3600 * 1000));
+  }
+  function isDoneVisibleOnBoard(item) {
+    if (item.state !== "DONE") return true;
+    if (!item.completedAt) return true;
+    const age = daysAgo(item.completedAt);
+    return age <= 7 || showArchiveDone;
+  }
+
+  // --- Filtering & grouping ---
+
+  function filteredItems() {
+    return data.items.filter(item => {
+      if (currentProjectId !== "ALL" && item.projectId !== currentProjectId) return false;
+      if (activeTags.size > 0) {
+        const tags = new Set(item.tags || []);
+        for (const tag of activeTags) {
+          if (!tags.has(tag)) return false;
+        }
+      }
+      // Release filter only applies when a specific project selected
+      if (currentProjectId !== "ALL" && activeReleaseFilterId !== null) {
+        if (activeReleaseFilterId === "NO_RELEASE") {
+          if (item.releaseId !== null) return false;
+        } else {
+          if (item.releaseId !== activeReleaseFilterId) return false;
+        }
+      }
+      if (item.state === "DONE" && !isDoneVisibleOnBoard(item)) return false;
+      return true;
+    });
+  }
+
+  // --- Rendering: projects & nav ---
+
+  function renderProjectsSelect() {
+    projectSelectEl.innerHTML = "";
+    const optAll = document.createElement("option");
+    optAll.value = "ALL";
+    optAll.textContent = "All projects";
+    projectSelectEl.appendChild(optAll);
+    getAllProjects().forEach(p => {
+      const opt = document.createElement("option");
+      opt.value = p.id;
+      opt.textContent = p.name;
+      projectSelectEl.appendChild(opt);
+    });
+    if (!currentProjectId || (currentProjectId !== "ALL" && !findProjectById(currentProjectId))) {
+      currentProjectId = "ALL";
+    }
+    projectSelectEl.value = currentProjectId;
+  }
+
+  function setMode(newMode) {
+    mode = newMode;
+    if (mode === "boards") {
+      modeBoardsBtn.classList.add("active");
+      modeManageBtn.classList.remove("active");
+      filtersPanelEl.classList.remove("hidden");
+      boardsViewEl.classList.remove("hidden");
+      manageViewEl.classList.add("hidden");
+      bottomBarEl.classList.remove("hidden");
+      bottomHintEl.textContent = "Click an item to view/edit details and subitems. Drag to change state or release.";
+    } else {
+      modeBoardsBtn.classList.remove("active");
+      modeManageBtn.classList.add("active");
+      filtersPanelEl.classList.add("hidden");
+      boardsViewEl.classList.add("hidden");
+      manageViewEl.classList.remove("hidden");
+      bottomBarEl.classList.add("hidden");
+    }
+    renderOverall();
+  }
+
+  function setBoardType(newType) {
+    boardType = newType;
+    if (boardType === "state") {
+      boardStateBtn.classList.add("active");
+      boardReleaseBtn.classList.remove("active");
+    } else {
+      boardStateBtn.classList.remove("active");
+      boardReleaseBtn.classList.add("active");
+    }
+    renderOverall();
+  }
+
+  // --- Chips ---
+
+  function renderTagChips() {
+    tagChipsEl.innerHTML = "";
+    getAllTags().forEach(tag => {
+      const chip = document.createElement("div");
+      chip.className = "chip" + (activeTags.has(tag) ? " active" : "");
+      chip.textContent = tag;
+      chip.dataset.tag = tag;
+      chip.addEventListener("click", () => {
+        if (activeTags.has(tag)) activeTags.delete(tag);
+        else activeTags.add(tag);
+        renderOverall();
+      });
+      tagChipsEl.appendChild(chip);
+    });
+  }
+
+  function renderReleaseChips() {
+    releaseChipsEl.innerHTML = "";
+    releaseChipsHintEl.textContent = "";
+    if (currentProjectId === "ALL") {
+      releaseChipsHintEl.textContent = "Select a specific project to filter by release.";
+      return;
+    }
+    const releases = getReleasesForProject(currentProjectId).filter(r => r.state !== "ARCHIVED");
+    const backlogChip = document.createElement("div");
+    backlogChip.className = "chip" + (activeReleaseFilterId === "NO_RELEASE" ? " active" : "");
+    backlogChip.textContent = "BACKLOG (no release)";
+    backlogChip.addEventListener("click", () => {
+      activeReleaseFilterId = activeReleaseFilterId === "NO_RELEASE" ? null : "NO_RELEASE";
+      renderOverall();
+    });
+    releaseChipsEl.appendChild(backlogChip);
+
+    releases.forEach(rel => {
+      const chip = document.createElement("div");
+      chip.className = "chip" + (activeReleaseFilterId === rel.id ? " active" : "");
+      chip.textContent = rel.name;
+      chip.addEventListener("click", () => {
+        activeReleaseFilterId = activeReleaseFilterId === rel.id ? null : rel.id;
+        renderOverall();
+      });
+      releaseChipsEl.appendChild(chip);
+    });
+  }
+
+  // --- Boards rendering ---
+
+  function subitemsSummary(item) {
+    const subs = item.subitems || [];
+    if (!subs.length) return "";
+    const doneCount = subs.filter(s => s.done).length;
+    return `steps: ${doneCount}/${subs.length}`;
+  }
+
+  function renderItemCard(item) {
+    const el = document.createElement("div");
+    el.className = "item";
+    el.draggable = true;
+    el.dataset.itemId = item.id;
+
+    const title = document.createElement("div");
+    title.className = "item-title";
+    title.textContent = item.title;
+    el.appendChild(title);
+
+    const meta = document.createElement("div");
+    meta.className = "item-meta";
+
+    const prBadge = document.createElement("span");
+    prBadge.className = `badge priority-${item.priority}`;
+    prBadge.textContent = item.priority;
+    meta.appendChild(prBadge);
+
+    const typeBadge = document.createElement("span");
+    typeBadge.className = `badge type-${item.type}`;
+    typeBadge.textContent = item.type;
+    meta.appendChild(typeBadge);
+
+    const stateBadge = document.createElement("span");
+    stateBadge.className = `badge state-${item.state}`;
+    stateBadge.textContent = item.state;
+    meta.appendChild(stateBadge);
+
+    (item.tags || []).forEach(tag => {
+      const tagEl = document.createElement("span");
+      tagEl.className = "tag-pill";
+      tagEl.textContent = tag;
+      meta.appendChild(tagEl);
+    });
+
+    el.appendChild(meta);
+
+    const footer = document.createElement("div");
+    footer.className = "item-footer";
+
+    const filesInfo = document.createElement("span");
+    filesInfo.textContent = item.filesAffected && item.filesAffected.length
+      ? item.filesAffected[0] + (item.filesAffected.length > 1 ? " +" : "")
+      : "";
+    footer.appendChild(filesInfo);
+
+    const ageInfo = document.createElement("span");
+    const days = daysAgo(item.createdAt);
+    ageInfo.textContent = days !== null ? `${days}d ago` : "";
+    footer.appendChild(ageInfo);
+
+    const stepsInfo = document.createElement("span");
+    stepsInfo.className = "steps-indicator";
+    stepsInfo.textContent = subitemsSummary(item);
+    footer.appendChild(stepsInfo);
+
+    if (item.prompt && item.prompt.trim().length > 0) {
+      const promptIndicator = document.createElement("span");
+      promptIndicator.className = "prompt-indicator";
+      promptIndicator.textContent = "Prompt";
+      footer.appendChild(promptIndicator);
+    }
+
+    el.appendChild(footer);
+
+    el.addEventListener("dragstart", onDragStart);
+    el.addEventListener("dragend", onDragEnd);
+    el.addEventListener("click", () => openItemModal(item.id));
+
+    return el;
+  }
+
+  function clearBoardColumns() {
+    boardsViewEl.innerHTML = "";
+  }
+
+  function renderStateBoard() {
+    clearBoardColumns();
+    const items = filteredItems();
+    const byState = {};
+    STATE_ORDER.forEach(state => { byState[state] = []; });
+    items.forEach(item => {
+      if (!byState[item.state]) byState[item.state] = [];
+      byState[item.state].push(item);
+    });
+    STATE_ORDER.forEach(state => {
+      byState[state].sort((a, b) => {
+        const pA = PRIORITIES.indexOf(a.priority);
+        const pB = PRIORITIES.indexOf(b.priority);
+        if (pA !== pB) return pB - pA;
+        return (b.updatedAt || 0) - (a.updatedAt || 0);
+      });
+    });
+
+    STATE_ORDER.forEach(state => {
+      const column = document.createElement("div");
+      column.className = "column";
+      column.dataset.state = state;
+
+      const header = document.createElement("div");
+      header.className = "column-header";
+      const label = document.createElement("span");
+      label.textContent = state;
+      const countEl = document.createElement("span");
+      countEl.className = "count";
+      countEl.textContent = byState[state].length ? `${byState[state].length} items` : "";
+      header.appendChild(label);
+      header.appendChild(countEl);
+      column.appendChild(header);
+
+      const dropzone = document.createElement("div");
+      dropzone.className = "column-dropzone";
+      dropzone.dataset.state = state;
+      byState[state].forEach(item => {
+        dropzone.appendChild(renderItemCard(item));
+      });
+      column.appendChild(dropzone);
+
+      boardsViewEl.appendChild(column);
+    });
+
+    wireBoardDragTargets();
+  }
+
+  function renderReleaseBoard() {
+    clearBoardColumns();
+    if (currentProjectId === "ALL") {
+      const msg = document.createElement("div");
+      msg.style.fontSize = "12px";
+      msg.style.color = "#6b7280";
+      msg.textContent = "Select a specific project to view the Release board.";
+      boardsViewEl.appendChild(msg);
+      return;
+    }
+
+    const project = findProjectById(currentProjectId);
+    if (!project) return;
+    const releases = (project.releases || []).filter(r => r.state !== "ARCHIVED");
+
+    const items = filteredItems();
+
+    // Group items by releaseId, including null
+    const byReleaseId = {};
+    const releaseIds = ["NO_RELEASE"].concat(releases.map(r => r.id));
+    releaseIds.forEach(id => { byReleaseId[id] = []; });
+    items.forEach(item => {
+      const key = item.releaseId || "NO_RELEASE";
+      if (!byReleaseId[key]) byReleaseId[key] = [];
+      byReleaseId[key].push(item);
+    });
+
+    releaseIds.forEach(relId => {
+      const column = document.createElement("div");
+      column.className = "column";
+      column.dataset.releaseId = relId === "NO_RELEASE" ? "" : relId;
+
+      const header = document.createElement("div");
+      header.className = "column-header";
+      const label = document.createElement("span");
+      label.textContent = relId === "NO_RELEASE"
+        ? "BACKLOG (no release)"
+        : (releases.find(r => r.id === relId)?.name || relId);
+      const countEl = document.createElement("span");
+      countEl.className = "count";
+      countEl.textContent = byReleaseId[relId].length ? `${byReleaseId[relId].length} items` : "";
+      header.appendChild(label);
+      header.appendChild(countEl);
+
+      if (relId !== "NO_RELEASE") {
+        const editBtn = document.createElement("button");
+        editBtn.textContent = "Edit";
+        editBtn.addEventListener("click", () => {
+          openReleaseModal(currentProjectId, relId);
+        });
+        header.appendChild(editBtn);
+      }
+
+      column.appendChild(header);
+
+      const dropzone = document.createElement("div");
+      dropzone.className = "column-dropzone";
+      dropzone.dataset.releaseId = relId === "NO_RELEASE" ? "" : relId;
+      byReleaseId[relId].forEach(item => {
+        dropzone.appendChild(renderItemCard(item));
+      });
+      column.appendChild(dropzone);
+
+      boardsViewEl.appendChild(column);
+    });
+
+    wireBoardDragTargets();
+  }
+
+  function wireBoardDragTargets() {
+    document.querySelectorAll(".column-dropzone").forEach(zone => {
+      zone.addEventListener("dragover", (ev) => {
+        ev.preventDefault();
+        ev.dataTransfer.dropEffect = "move";
+      });
+      zone.addEventListener("drop", (ev) => {
+        ev.preventDefault();
+        const itemId = draggedItemId || ev.dataTransfer.getData("text/plain");
+        if (!itemId) return;
+        const item = data.items.find(i => i.id === itemId);
+        if (!item) return;
+        const now = Date.now();
+
+        if (boardType === "state") {
+          const state = zone.dataset.state;
+          if (!state) return;
+          const prevState = item.state;
+          item.state = state;
+          item.updatedAt = now;
+          if (state === "DONE") {
+            item.completedAt = now;
+          } else if (prevState === "DONE" && state !== "DONE") {
+            item.completedAt = null;
+          }
+        } else {
+          // release board
+          const releaseId = zone.dataset.releaseId || null;
+          item.releaseId = releaseId || null;
+          item.updatedAt = now;
+        }
+        saveData();
+        renderOverall();
+      });
+    });
+  }
+
+  // --- Management page rendering ---
+
+  function renderProjectsManage() {
+    projectsManageListEl.innerHTML = "";
+    getAllProjects().forEach(project => {
+      const row = document.createElement("div");
+      row.className = "manage-row" + (currentProjectId === project.id ? " selected" : "");
+
+      const titleRow = document.createElement("div");
+      titleRow.className = "manage-row-title";
+
+      const nameSpan = document.createElement("span");
+      nameSpan.className = "name";
+      nameSpan.textContent = project.name;
+      titleRow.appendChild(nameSpan);
+
+      const actions = document.createElement("div");
+      actions.className = "manage-row-actions";
+
+      const editBtn = document.createElement("button");
+      editBtn.textContent = "Edit";
+      editBtn.addEventListener("click", (ev) => {
+        ev.stopPropagation();
+        const newName = prompt("Project name:", project.name);
+        if (newName !== null && newName.trim()) {
+          project.name = newName.trim();
+        }
+        const newRepo = prompt("Repo path:", project.repoPath || "");
+        if (newRepo !== null) {
+          project.repoPath = newRepo.trim();
+        }
+        saveData();
+        renderOverall();
+      });
+      actions.appendChild(editBtn);
+
+      const deleteBtn = document.createElement("button");
+      deleteBtn.textContent = "Delete";
+      deleteBtn.classList.add("delete");
+      deleteBtn.addEventListener("click", (ev) => {
+        ev.stopPropagation();
+        const countItems = data.items.filter(i => i.projectId === project.id).length;
+        if (countItems > 0) {
+          alert("Cannot delete project with items.");
+          return;
+        }
+        data.projects = data.projects.filter(p => p.id !== project.id);
+        if (currentProjectId === project.id) currentProjectId = "ALL";
+        saveData();
+        renderOverall();
+      });
+      actions.appendChild(deleteBtn);
+
+      titleRow.appendChild(actions);
+      row.appendChild(titleRow);
+
+      row.addEventListener("click", () => {
+        currentProjectId = project.id;
+        projectSelectEl.value = project.id;
+        renderOverall();
+      });
+
+      const infoRow = document.createElement("div");
+      infoRow.textContent = `Repo: ${project.repoPath || ""}`;
+      row.appendChild(infoRow);
+
+      const relCount = (project.releases || []).length;
+      const itemCount = data.items.filter(i => i.projectId === project.id).length;
+      const countsRow = document.createElement("div");
+      countsRow.textContent = `Releases: ${relCount}, Items: ${itemCount}`;
+      row.appendChild(countsRow);
+
+      projectsManageListEl.appendChild(row);
+    });
+  }
+
+  function renderReleasesManage() {
+    releasesManageListEl.innerHTML = "";
+    if (currentProjectId === "ALL") {
+      releasesManageTitleEl.textContent = "Releases (select a project)";
+      return;
+    }
+    const project = findProjectById(currentProjectId);
+    if (!project) {
+      releasesManageTitleEl.textContent = "Releases";
+      return;
+    }
+    releasesManageTitleEl.textContent = `Releases for ${project.name}`;
+    (project.releases || []).forEach(release => {
+      const row = document.createElement("div");
+      row.className = "manage-row";
+
+      const titleRow = document.createElement("div");
+      titleRow.className = "manage-row-title";
+
+      const nameSpan = document.createElement("span");
+      nameSpan.className = "name";
+      nameSpan.textContent = release.name;
+      titleRow.appendChild(nameSpan);
+
+      const actions = document.createElement("div");
+      actions.className = "manage-row-actions";
+
+      const editBtn = document.createElement("button");
+      editBtn.textContent = "Edit";
+      editBtn.addEventListener("click", () => {
+        openReleaseModal(project.id, release.id);
+      });
+      actions.appendChild(editBtn);
+
+      const deleteBtn = document.createElement("button");
+      deleteBtn.textContent = "Delete";
+      deleteBtn.classList.add("delete");
+      deleteBtn.addEventListener("click", () => {
+        const countItems = data.items.filter(i => i.projectId === project.id && i.releaseId === release.id).length;
+        if (countItems > 0) {
+          alert("Cannot delete release with items.");
+          return;
+        }
+        project.releases = (project.releases || []).filter(r => r.id !== release.id);
+        if (activeReleaseFilterId === release.id) activeReleaseFilterId = null;
+        saveData();
+        renderOverall();
+      });
+      actions.appendChild(deleteBtn);
+
+      titleRow.appendChild(actions);
+      row.appendChild(titleRow);
+
+      const infoRow = document.createElement("div");
+      infoRow.textContent = `State: ${release.state}, Note: ${release.note || ""}`;
+      row.appendChild(infoRow);
+
+      const itemCount = data.items.filter(i => i.projectId === project.id && i.releaseId === release.id).length;
+      const countsRow = document.createElement("div");
+      countsRow.textContent = `Items: ${itemCount}`;
+      row.appendChild(countsRow);
+
+      releasesManageListEl.appendChild(row);
+    });
+  }
+
+  // --- Item modal ---
+
+  function openItemModal(itemId) {
+    const item = data.items.find(i => i.id === itemId);
+    if (!item) return;
+    modalItemId = itemId;
+    modalTitleEl.textContent = item.title;
+
+    fieldTitle.value = item.title || "";
+    fieldState.value = item.state || "BACKLOG";
+    fieldPriority.value = item.priority || "MEDIUM";
+    fieldType.value = item.type || "FEATURE";
+    fieldTags.value = (item.tags || []).join(", ");
+    fieldFiles.value = (item.filesAffected || []).join(", ");
+    fieldAnalysis.value = item.analysis || "";
+    fieldPrompt.value = item.prompt || "";
+    fieldReport.value = item.report || "";
+
+    renderReleaseSelectForItem(item);
+    renderSubitemsSection(item);
+
+    itemModalOverlayEl.classList.add("open");
+  }
+
+  function closeItemModal() {
+    itemModalOverlayEl.classList.remove("open");
+    modalItemId = null;
+  }
+
+  function renderReleaseSelectForItem(item) {
+    const project = findProjectById(item.projectId);
+    fieldRelease.innerHTML = "";
+    const optNone = document.createElement("option");
+    optNone.value = "";
+    optNone.textContent = "BACKLOG (no release)";
+    fieldRelease.appendChild(optNone);
+
+    if (project) {
+      (project.releases || [])
+        .filter(r => r.state !== "ARCHIVED")
+        .forEach(rel => {
+          const opt = document.createElement("option");
+          opt.value = rel.id;
+          opt.textContent = `${rel.name} (${rel.state})`;
+          fieldRelease.appendChild(opt);
+        });
+    }
+    fieldRelease.value = item.releaseId || "";
+  }
+
+  function renderSubitemsSection(item) {
+    const subs = item.subitems || [];
+    const doneCount = subs.filter(s => s.done).length;
+    subitemsSummaryLabelEl.textContent = subs.length
+      ? `${doneCount}/${subs.length} done`
+      : "No subitems";
+
+    subitemsListEl.innerHTML = "";
+
+    subs.forEach((sub) => {
+      const row = document.createElement("div");
+      row.className = "subitem-row";
+      row.draggable = true;
+      row.dataset.subId = sub.id;
+
+      const handle = document.createElement("span");
+      handle.className = "subitem-handle";
+      handle.textContent = "⋮⋮";
+      row.appendChild(handle);
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.checked = !!sub.done;
+      checkbox.addEventListener("change", () => {
+        sub.done = checkbox.checked;
+        const subsNow = item.subitems || [];
+        const doneNow = subsNow.filter(s => s.done).length;
+        subitemsSummaryLabelEl.textContent = subsNow.length
+          ? `${doneNow}/${subsNow.length} done`
+          : "No subitems";
+      });
+      row.appendChild(checkbox);
+
+      const titleInput = document.createElement("input");
+      titleInput.className = "subitem-title-input";
+      titleInput.value = sub.title || "";
+      titleInput.addEventListener("input", () => {
+        sub.title = titleInput.value;
+      });
+      row.appendChild(titleInput);
+
+      const actions = document.createElement("div");
+      actions.className = "subitem-actions";
+
+      const promoteBtn = document.createElement("button");
+      promoteBtn.type = "button";
+      promoteBtn.textContent = "Promote";
+      promoteBtn.addEventListener("click", () => {
+        promoteSubitem(item, sub);
+      });
+      actions.appendChild(promoteBtn);
+
+      const deleteBtn = document.createElement("button");
+      deleteBtn.type = "button";
+      deleteBtn.textContent = "✕";
+      deleteBtn.addEventListener("click", () => {
+        const idx = item.subitems.findIndex(s => s.id === sub.id);
+        if (idx >= 0) {
+          item.subitems.splice(idx, 1);
+          renderSubitemsSection(item);
+        }
+      });
+      actions.appendChild(deleteBtn);
+
+      row.appendChild(actions);
+
+      // drag & drop within checklist
+      row.addEventListener("dragstart", (ev) => {
+        row.classList.add("dragging");
+        ev.dataTransfer.effectAllowed = "move";
+        ev.dataTransfer.setData("text/plain", sub.id);
+      });
+      row.addEventListener("dragend", () => {
+        row.classList.remove("dragging");
+      });
+      row.addEventListener("dragover", (ev) => {
+        ev.preventDefault();
+      });
+      row.addEventListener("drop", (ev) => {
+        ev.preventDefault();
+        const draggedId = ev.dataTransfer.getData("text/plain");
+        if (!draggedId || draggedId === sub.id) return;
+        const subsArr = item.subitems || [];
+        const fromIndex = subsArr.findIndex(s => s.id === draggedId);
+        const toIndex = subsArr.findIndex(s => s.id === sub.id);
+        if (fromIndex < 0 || toIndex < 0) return;
+        const [moved] = subsArr.splice(fromIndex, 1);
+        subsArr.splice(toIndex, 0, moved);
+        item.subitems = subsArr;
+        renderSubitemsSection(item);
+      });
+
+      subitemsListEl.appendChild(row);
+    });
+  }
+
+  function promoteSubitem(parentItem, sub) {
+    if (!sub.title || !sub.title.trim()) return;
+    const newId = "item-promoted-" + Date.now() + "-" + Math.floor(Math.random() * 1000);
+    const newItem = {
+      id: newId,
+      projectId: parentItem.projectId,
+      releaseId: parentItem.releaseId || null,
+      title: sub.title,
+      tags: parentItem.tags ? [...parentItem.tags] : [],
+      priority: parentItem.priority,
+      type: parentItem.type,
+      state: parentItem.state,
+      analysis: parentItem.analysis || "",
+      filesAffected: [],
+      prompt: parentItem.prompt || "",
+      report: "",
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      completedAt: null,
+      subitems: []
+    };
+    data.items.push(newItem);
+    const idx = parentItem.subitems.findIndex(s => s.id === sub.id);
+    if (idx >= 0) {
+      parentItem.subitems.splice(idx, 1);
+    }
+    renderSubitemsSection(parentItem);
+    saveData();
+    renderOverall();
+  }
+
+  addSubitemBtn.addEventListener("click", () => {
+    if (!modalItemId) return;
+    const item = data.items.find(i => i.id === modalItemId);
+    if (!item) return;
+    if (!item.subitems) item.subitems = [];
+    const newSub = {
+      id: "sub-" + modalItemId + "-" + Date.now(),
+      title: "",
+      done: false
+    };
+    item.subitems.push(newSub);
+    renderSubitemsSection(item);
+  });
+
+  modalCloseBtn.addEventListener("click", closeItemModal);
+  modalCancelBtn.addEventListener("click", closeItemModal);
+  itemModalOverlayEl.addEventListener("click", (ev) => {
+    if (ev.target === itemModalOverlayEl) closeItemModal();
+  });
+
+  itemFormEl.addEventListener("submit", (ev) => {
+    ev.preventDefault();
+    if (!modalItemId) return;
+    const item = data.items.find(i => i.id === modalItemId);
+    if (!item) return;
+
+    item.title = fieldTitle.value.trim();
+    const prevState = item.state;
+    item.state = fieldState.value;
+    item.priority = fieldPriority.value;
+    item.type = fieldType.value;
+
+    const tagsText = fieldTags.value.trim();
+    item.tags = tagsText ? tagsText.split(",").map(t => t.trim()).filter(Boolean) : [];
+
+    const filesText = fieldFiles.value.trim();
+    item.filesAffected = filesText ? filesText.split(",").map(f => f.trim()).filter(Boolean) : [];
+
+    item.analysis = fieldAnalysis.value;
+    item.prompt = fieldPrompt.value;
+    item.report = fieldReport.value;
+
+    const releaseVal = fieldRelease.value;
+    item.releaseId = releaseVal ? releaseVal : null;
+
+    const now = Date.now();
+    item.updatedAt = now;
+    if (item.state === "DONE") {
+      item.completedAt = item.completedAt || now;
+    } else if (prevState === "DONE" && item.state !== "DONE") {
+      item.completedAt = null;
+    }
+
+    saveData();
+    renderOverall();
+    closeItemModal();
+  });
+
+  // --- Release modal ---
+
+  function openReleaseModal(projectId, releaseId) {
+    const project = findProjectById(projectId);
+    if (!project) return;
+    const release = (project.releases || []).find(r => r.id === releaseId);
+    if (!release) return;
+    modalReleaseProjectId = projectId;
+    modalReleaseId = releaseId;
+
+    releaseModalTitleEl.textContent = `Release: ${release.name}`;
+    fieldReleaseName.value = release.name;
+    fieldReleaseState.value = release.state;
+    fieldReleaseNote.value = release.note || "";
+
+    releaseModalOverlayEl.classList.add("open");
+  }
+
+  function closeReleaseModal() {
+    releaseModalOverlayEl.classList.remove("open");
+    modalReleaseProjectId = null;
+    modalReleaseId = null;
+  }
+
+  releaseModalCloseBtn.addEventListener("click", closeReleaseModal);
+  releaseModalCancelBtn.addEventListener("click", closeReleaseModal);
+  releaseModalOverlayEl.addEventListener("click", (ev) => {
+    if (ev.target === releaseModalOverlayEl) closeReleaseModal();
+  });
+
+  releaseFormEl.addEventListener("submit", (ev) => {
+    ev.preventDefault();
+    if (!modalReleaseProjectId || !modalReleaseId) return;
+    const project = findProjectById(modalReleaseProjectId);
+    if (!project) return;
+    const release = (project.releases || []).find(r => r.id === modalReleaseId);
+    if (!release) return;
+
+    const name = fieldReleaseName.value.trim();
+    if (name) release.name = name;
+    release.state = fieldReleaseState.value;
+    release.note = fieldReleaseNote.value;
+
+    saveData();
+    renderOverall();
+    closeReleaseModal();
+  });
+
+  // --- Quick edit mode ---
+
+  function setQuickEditMode(enabled) {
+    quickEditMode = enabled;
+    if (quickEditMode) {
+      qeModeNormalBtn.classList.remove("active");
+      qeModeQuickBtn.classList.add("active");
+    } else {
+      qeModeNormalBtn.classList.add("active");
+      qeModeQuickBtn.classList.remove("active");
+    }
+    renderOverall();
+  }
+
+  function renderQuickEditView() {
+    const projectName = currentProjectId === "ALL"
+      ? "All Projects"
+      : (findProjectById(currentProjectId)?.name || "Unknown");
+
+    qeViewEl.innerHTML = "";
+    const container = document.createElement("div");
+    container.className = "qe-container";
+
+    const header = document.createElement("div");
+    header.className = "qe-header";
+    const headerLabel = document.createElement("span");
+    const listName = boardType === "state" ? "by State" : "by Release";
+    headerLabel.textContent = `Quick Edit – ${listName} (${projectName})`;
+    header.appendChild(headerLabel);
+    const headerHint = document.createElement("span");
+    headerHint.style.cssText = "font-size:11px;color:#6b7280;";
+    headerHint.textContent = "Drag rows to reorder. Double-click title to edit. TAB moves to next row.";
+    header.appendChild(headerHint);
+    container.appendChild(header);
+
+    // Determine groups (same logic as board rendering)
+    const items = filteredItems();
+    let groups;
+
+    if (boardType === "state") {
+      const byState = {};
+      STATE_ORDER.forEach(state => { byState[state] = []; });
+      items.forEach(item => {
+        if (!byState[item.state]) byState[item.state] = [];
+        byState[item.state].push(item);
+      });
+      STATE_ORDER.forEach(state => {
+        byState[state].sort((a, b) => {
+          const pA = PRIORITIES.indexOf(a.priority);
+          const pB = PRIORITIES.indexOf(b.priority);
+          if (pA !== pB) return pB - pA;
+          return (b.updatedAt || 0) - (a.updatedAt || 0);
+        });
+      });
+      groups = STATE_ORDER.map(state => ({
+        id: state,
+        label: state,
+        items: byState[state]
+      }));
+    } else {
+      // release board
+      if (currentProjectId === "ALL") {
+        const msg = document.createElement("div");
+        msg.style.cssText = "padding:12px;font-size:12px;color:#6b7280;";
+        msg.textContent = "Select a specific project to view the Release board.";
+        container.appendChild(msg);
+        qeViewEl.appendChild(container);
+        return;
+      }
+      const project = findProjectById(currentProjectId);
+      if (!project) return;
+      const releases = (project.releases || []).filter(r => r.state !== "ARCHIVED");
+      const byReleaseId = {};
+      const releaseIds = ["NO_RELEASE"].concat(releases.map(r => r.id));
+      releaseIds.forEach(id => { byReleaseId[id] = []; });
+      items.forEach(item => {
+        const key = item.releaseId || "NO_RELEASE";
+        if (!byReleaseId[key]) byReleaseId[key] = [];
+        byReleaseId[key].push(item);
+      });
+      groups = releaseIds.map(relId => ({
+        id: relId,
+        label: relId === "NO_RELEASE"
+          ? "BACKLOG (no release)"
+          : (releases.find(r => r.id === relId)?.name || relId),
+        items: byReleaseId[relId]
+      }));
+    }
+
+    // Render one table per group/column (including empty groups as drop targets)
+    groups.forEach((group) => {
+      const groupEl = document.createElement("div");
+      groupEl.className = "qe-group";
+      groupEl.dataset.groupId = group.id;
+
+      const groupLabel = document.createElement("div");
+      groupLabel.className = "qe-group-label";
+      groupLabel.textContent = `${group.label} (${group.items.length})`;
+      groupEl.appendChild(groupLabel);
+
+      const table = document.createElement("table");
+      table.className = "qe-table";
+
+      const thead = document.createElement("thead");
+      const headRow = document.createElement("tr");
+      const columns = boardType === "state"
+        ? ["#", "ID", "Title", "Priority", "Type", "Tags"]
+        : ["#", "ID", "Title", "Priority", "Type", "State", "Tags"];
+      columns.forEach(text => {
+        const th = document.createElement("th");
+        th.textContent = text;
+        headRow.appendChild(th);
+      });
+      thead.appendChild(headRow);
+      table.appendChild(thead);
+
+      const tbody = document.createElement("tbody");
+      tbody.className = "qe-tbody";
+
+      if (group.items.length === 0) {
+        // Empty group — render a placeholder row that acts as drop target
+        const placeholderTr = document.createElement("tr");
+        placeholderTr.className = "qe-empty-row";
+        const placeholderTd = document.createElement("td");
+        placeholderTd.colSpan = columns.length;
+        placeholderTd.textContent = "— drop items here —";
+        placeholderTd.style.cssText = "text-align:center;color:#9ca3af;font-style:italic;padding:12px 6px;";
+        placeholderTr.appendChild(placeholderTd);
+        tbody.appendChild(placeholderTr);
+      } else {
+        group.items.forEach((item, rowIndex) => {
+          const tr = document.createElement("tr");
+          tr.dataset.itemId = item.id;
+          tr.draggable = true;
+
+          // # / drag handle
+          const tdHandle = document.createElement("td");
+          tdHandle.style.width = "5%";
+          const handleSpan = document.createElement("span");
+          handleSpan.className = "qe-row-handle";
+          handleSpan.textContent = String(rowIndex + 1);
+          tdHandle.appendChild(handleSpan);
+          tr.appendChild(tdHandle);
+
+          // ID
+          const tdId = document.createElement("td");
+          tdId.style.width = "15%";
+          tdId.textContent = item.id;
+          tdId.title = item.id;
+          tr.appendChild(tdId);
+
+          // Title (editable)
+          const tdTitle = document.createElement("td");
+          tdTitle.style.width = "30%";
+          tdTitle.textContent = item.title;
+          tdTitle.title = item.title;
+          tdTitle.classList.add("qe-cell-editable");
+          tdTitle.dataset.itemId = item.id;
+          tr.appendChild(tdTitle);
+
+          // Priority badge
+          const tdPri = document.createElement("td");
+          tdPri.style.width = "10%";
+          const priSpan = document.createElement("span");
+          priSpan.className = `qe-badge badge priority-${item.priority}`;
+          priSpan.textContent = item.priority;
+          tdPri.appendChild(priSpan);
+          tr.appendChild(tdPri);
+
+          // Type badge
+          const tdType = document.createElement("td");
+          tdType.style.width = "10%";
+          const typeSpan = document.createElement("span");
+          typeSpan.className = `qe-badge badge type-${item.type}`;
+          typeSpan.textContent = item.type;
+          tdType.appendChild(typeSpan);
+          tr.appendChild(tdType);
+
+          // State badge (only for release board where not all items have same state)
+          if (boardType !== "state") {
+            const tdState = document.createElement("td");
+            tdState.style.width = "10%";
+            const stateSpan = document.createElement("span");
+            stateSpan.className = `qe-badge badge state-${item.state}`;
+            stateSpan.textContent = item.state;
+            tdState.appendChild(stateSpan);
+            tr.appendChild(tdState);
+          }
+
+          // Tags
+          const tdTags = document.createElement("td");
+          const tagWidth = boardType === "state" ? "30%" : "20%";
+          tdTags.style.width = tagWidth;
+          tdTags.textContent = (item.tags || []).join(", ");
+          tdTags.title = (item.tags || []).join(", ");
+          tr.appendChild(tdTags);
+
+          // Drag start/end on each row for visual feedback
+          tr.addEventListener("dragstart", (ev) => {
+            tr.classList.add("qe-row-dragging");
+            ev.dataTransfer.effectAllowed = "move";
+            ev.dataTransfer.setData("text/plain", item.id);
+          });
+          tr.addEventListener("dragend", () => {
+            tr.classList.remove("qe-row-dragging");
+          });
+
+          tbody.appendChild(tr);
+        });
+      }
+
+      // Tbody-level drop handles both same-group reorder and cross-group moves
+      tbody.addEventListener("dragover", (ev) => {
+        ev.preventDefault();
+        ev.dataTransfer.dropEffect = "move";
+        tbody.classList.add("qe-drag-over");
+      });
+      tbody.addEventListener("dragleave", () => {
+        tbody.classList.remove("qe-drag-over");
+      });
+      tbody.addEventListener("drop", (ev) => {
+        tbody.classList.remove("qe-drag-over");
+        ev.preventDefault();
+        const draggedItemId = ev.dataTransfer.getData("text/plain");
+        if (!draggedItemId) return;
+        const draggedItem = data.items.find(i => i.id === draggedItemId);
+        if (!draggedItem) return;
+
+        const targetGroupEl = tbody.closest(".qe-group");
+        if (!targetGroupEl) return;
+        const targetGroupId = targetGroupEl.dataset.groupId;
+
+        // Find source group for the dragged item
+        const sourceGroupId = boardType === "state"
+          ? draggedItem.state
+          : (draggedItem.releaseId || "NO_RELEASE");
+
+        const sameGroup = targetGroupId === sourceGroupId;
+
+        if (sameGroup) {
+          // Same group: reorder within the group
+          const targetTr = ev.target.closest("tr");
+          if (!targetTr || draggedItemId === targetTr.dataset.itemId) return;
+          const targetItem = data.items.find(i => i.id === targetTr.dataset.itemId);
+          if (!targetItem) return;
+          const grpItems = group.items;
+          const fromIdx = grpItems.indexOf(draggedItem);
+          const toIdx = grpItems.indexOf(targetItem);
+          if (fromIdx < 0 || toIdx < 0) return;
+          const fromActual = data.items.indexOf(draggedItem);
+          const toActual = data.items.indexOf(targetItem);
+          if (fromActual < 0 || toActual < 0) return;
+          const [moved] = data.items.splice(fromActual, 1);
+          const adjustedTo = data.items.indexOf(targetItem);
+          data.items.splice(adjustedTo, 0, moved);
+        } else {
+          // Different group: move item between lists
+          const now = Date.now();
+          if (boardType === "state") {
+            const prevState = draggedItem.state;
+            draggedItem.state = targetGroupId;
+            draggedItem.updatedAt = now;
+            if (targetGroupId === "DONE") {
+              draggedItem.completedAt = now;
+            } else if (prevState === "DONE") {
+              draggedItem.completedAt = null;
+            }
+          } else {
+            draggedItem.releaseId = targetGroupId === "NO_RELEASE" ? null : targetGroupId;
+            draggedItem.updatedAt = now;
+          }
+          // Move item to end of target group (place in data.items order)
+          const targetGroupItems = (boardType === "state"
+            ? filteredItems().filter(i => i.state === targetGroupId)
+            : filteredItems().filter(i => (i.releaseId || "NO_RELEASE") === targetGroupId));
+          const lastInGroup = targetGroupItems[targetGroupItems.length - 1];
+          if (lastInGroup) {
+            const fromActual = data.items.indexOf(draggedItem);
+            const insertAfter = data.items.indexOf(lastInGroup);
+            if (fromActual >= 0 && insertAfter >= 0) {
+              const [moved] = data.items.splice(fromActual, 1);
+              const adjInsert = data.items.indexOf(lastInGroup);
+              data.items.splice(adjInsert + 1, 0, moved);
+            }
+          }
+        }
+        saveData();
+        renderQuickEditView();
+      });
+
+      table.appendChild(tbody);
+      groupEl.appendChild(table);
+      container.appendChild(groupEl);
+    });
+
+    qeViewEl.appendChild(container);
+  }
+
+  function qeStartEditCell(td) {
+    if (qeEditingCell === td) return;
+    qeCancelEditCell();
+
+    const itemId = td.dataset.itemId;
+    if (!itemId) return;
+    const item = data.items.find(i => i.id === itemId);
+    if (!item) return;
+
+    const input = document.createElement("input");
+    input.type = "text";
+    input.className = "qe-cell-input";
+    input.value = item.title || "";
+    td.textContent = "";
+    td.appendChild(input);
+    qeEditingCell = td;
+
+    input.focus();
+    input.select();
+
+    input.addEventListener("keydown", (ev) => {
+      if (ev.key === "Enter") {
+        qeCommitEditCell(td, input.value);
+        ev.preventDefault();
+      } else if (ev.key === "Escape") {
+        qeCancelEditCell();
+        ev.preventDefault();
+      } else if (ev.key === "Tab") {
+        qeCommitEditCell(td, input.value);
+        ev.preventDefault();
+        qeFocusNextRowTitle(td, !ev.shiftKey);
+      }
+    });
+
+    input.addEventListener("blur", () => {
+      qeCommitEditCell(td, input.value);
+    });
+  }
+
+  function qeCommitEditCell(td, value) {
+    if (!qeEditingCell || qeEditingCell !== td) return;
+    const itemId = td.dataset.itemId;
+    if (!itemId) return;
+    const item = data.items.find(i => i.id === itemId);
+    if (!item) return;
+
+    item.title = value;
+    td.textContent = value;
+    td.title = value;
+    qeEditingCell = null;
+    saveData();
+  }
+
+  function qeCancelEditCell() {
+    if (!qeEditingCell) return;
+    const td = qeEditingCell;
+    const itemId = td.dataset.itemId;
+    const item = itemId ? data.items.find(i => i.id === itemId) : null;
+    const value = item ? item.title : "";
+    td.textContent = value || "";
+    td.title = value || "";
+    qeEditingCell = null;
+  }
+
+  function qeFocusNextRowTitle(currentTd, forward) {
+    const currentTr = currentTd.closest("tr");
+    if (!currentTr) return;
+    const currentTbody = currentTr.closest("tbody");
+    if (!currentTbody) return;
+    const currentItemId = currentTd.dataset.itemId;
+    const rows = Array.from(currentTbody.querySelectorAll("tr"));
+    const currentIdx = rows.findIndex(tr =>
+      tr.querySelector("td[data-item-id]")?.dataset.itemId === currentItemId
+    );
+    if (currentIdx < 0) return;
+    const nextIdx = forward ? currentIdx + 1 : currentIdx - 1;
+    if (nextIdx < 0 || nextIdx >= rows.length) return;
+    const nextTitleCell = rows[nextIdx].querySelector("td[data-item-id].qe-cell-editable");
+    if (nextTitleCell) qeStartEditCell(nextTitleCell);
+  }
+
+  // Wire quick-edit double-click on the tbody via delegation
+  document.addEventListener("dblclick", (ev) => {
+    const td = ev.target.closest("td");
+    if (!td || !td.classList.contains("qe-cell-editable")) return;
+    qeStartEditCell(td);
+  });
+
+  qeModeNormalBtn.addEventListener("click", () => setQuickEditMode(false));
+  qeModeQuickBtn.addEventListener("click", () => setQuickEditMode(true));
+
+  // --- Drag handlers for cards ---
+
+  function onDragStart(ev) {
+    const itemId = ev.target.dataset.itemId;
+    draggedItemId = itemId;
+    ev.dataTransfer.effectAllowed = "move";
+    ev.dataTransfer.setData("text/plain", itemId);
+    ev.target.classList.add("dragging");
+  }
+  function onDragEnd(ev) {
+    ev.target.classList.remove("dragging");
+    draggedItemId = null;
+  }
+
+  // --- Events: nav, project, archive toggle ---
+
+  modeBoardsBtn.addEventListener("click", () => setMode("boards"));
+  modeManageBtn.addEventListener("click", () => setMode("manage"));
+
+  boardStateBtn.addEventListener("click", () => setBoardType("state"));
+  boardReleaseBtn.addEventListener("click", () => setBoardType("release"));
+
+  projectSelectEl.addEventListener("change", () => {
+    currentProjectId = projectSelectEl.value;
+    // When switching to ALL, reset release filter
+    if (currentProjectId === "ALL") {
+      activeReleaseFilterId = null;
+    }
+    renderOverall();
+  });
+
+  toggleArchiveEl.addEventListener("click", () => {
+    showArchiveDone = !showArchiveDone;
+    toggleArchiveEl.textContent = showArchiveDone
+      ? "Hide archive DONE items"
+      : "Show archive DONE items";
+    renderOverall();
+  });
+
+  addProjectBtn.addEventListener("click", () => {
+    const name = prompt("Project name:");
+    if (!name || !name.trim()) return;
+    const repoPath = prompt("Repo path:");
+    const newId = "proj-" + Date.now() + "-" + Math.floor(Math.random() * 1000);
+    data.projects.push({
+      id: newId,
+      name: name.trim(),
+      repoPath: repoPath ? repoPath.trim() : "",
+      releases: []
+    });
+    saveData();
+    renderOverall();
+  });
+
+  addReleaseBtn.addEventListener("click", () => {
+    if (currentProjectId === "ALL") {
+      alert("Select a specific project to add a release.");
+      return;
+    }
+    const project = findProjectById(currentProjectId);
+    if (!project) return;
+    const name = prompt("Release name:");
+    if (!name || !name.trim()) return;
+    const newId = "rel-" + currentProjectId + "-" + Date.now() + "-" + Math.floor(Math.random() * 1000);
+    project.releases = project.releases || [];
+    project.releases.push({
+      id: newId,
+      name: name.trim(),
+      state: "PLANNED",
+      startDate: null,
+      endDate: null,
+      note: ""
+    });
+    saveData();
+    renderOverall();
+  });
+
+  // --- Main render orchestrator ---
+
+  function renderBoardsView() {
+    if (quickEditMode) {
+      boardsViewEl.classList.add("hidden");
+      qeViewEl.classList.remove("hidden");
+      renderQuickEditView();
+    } else {
+      boardsViewEl.classList.remove("hidden");
+      qeViewEl.classList.add("hidden");
+      if (boardType === "state") {
+        renderStateBoard();
+      } else {
+        renderReleaseBoard();
+      }
+    }
+  }
+
+  function renderManageView() {
+    renderProjectsManage();
+    renderReleasesManage();
+  }
+
+  function renderOverall() {
+    renderProjectsSelect();
+    if (mode === "boards") {
+      filtersPanelEl.classList.remove("hidden");
+      qeToggleBarEl.classList.remove("hidden");
+      manageViewEl.classList.add("hidden");
+      bottomBarEl.classList.remove("hidden");
+
+      renderTagChips();
+      renderReleaseChips();
+
+      // release board disabled for ALL
+      if (currentProjectId === "ALL" && boardType === "release") {
+        boardType = "state";
+        boardStateBtn.classList.add("active");
+        boardReleaseBtn.classList.remove("active");
+      }
+      if (quickEditMode) {
+        qeToggleHint.classList.remove("hidden");
+      } else {
+        qeToggleHint.classList.remove("hidden");
+      }
+      renderBoardsView();
+    } else {
+      // Reset to normal mode when switching to manage (no re-render)
+      if (quickEditMode) {
+        quickEditMode = false;
+        qeModeNormalBtn.classList.add("active");
+        qeModeQuickBtn.classList.remove("active");
+      }
+      filtersPanelEl.classList.add("hidden");
+      qeToggleBarEl.classList.add("hidden");
+      boardsViewEl.classList.add("hidden");
+      qeViewEl.classList.add("hidden");
+      manageViewEl.classList.remove("hidden");
+      bottomBarEl.classList.add("hidden");
+      renderManageView();
+    }
+  }
+
+  // --- Initial render ---
+
+  // Ensure correct initial toggle state
+  qeModeNormalBtn.classList.add("active");
+  qeModeQuickBtn.classList.remove("active");
+
+  renderOverall();
+</script>
+</body>
+</html>
