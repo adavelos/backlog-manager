@@ -549,9 +549,12 @@ function isCacheStale(cached, serverConfig) {
     renderStatusBar();
     renderHeaderTypeToggle();
     const t2 = performance.now();
-    // Fire app:ready synchronously—page scripts already loaded synchronously.
-    document.dispatchEvent(new CustomEvent("app:ready"));
-    console.log(`[PERF] Cache hit: ${(t2-t0).toFixed(0)}ms`);
+    // Fire app:ready as microtask so page-specific scripts (boards.js, etc.)
+    // have loaded and registered their listeners before the event fires.
+    Promise.resolve().then(() => {
+      document.dispatchEvent(new CustomEvent("app:ready"));
+      console.log(`[PERF] Cache hit: ${(t2-t0).toFixed(0)}ms`);
+    });
   } else {
     // ── Fresh load from server (no cache, or cache is stale) ──
     if (cached) {
