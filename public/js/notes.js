@@ -103,7 +103,7 @@ function renderNotesTree() {
   }
 
   scopeProjects.forEach(project => {
-    const releases = (project.releases || []).slice().sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+    // Get all notes for this project (regardless of releaseId for backwards compatibility)
     const projectNotes = data.notes.filter(n => n.projectId === project.id);
 
     const projDiv = document.createElement("div");
@@ -129,61 +129,15 @@ function renderNotesTree() {
 
     projDiv.appendChild(projHeader);
 
-    if (releases.length === 0) {
-      const orphanNotes = projectNotes.filter(n => !n.releaseId);
-      if (orphanNotes.length > 0) {
-        const orphanDiv = document.createElement("div");
-        orphanDiv.className = "notes-tree-release";
-        const orphanHdr = document.createElement("div");
-        orphanHdr.className = "notes-tree-release-header";
-        const orphanHdrSpan = document.createElement("span");
-        orphanHdrSpan.textContent = "(no release)";
-        orphanHdr.appendChild(orphanHdrSpan);
-        orphanDiv.appendChild(orphanHdr);
-
-        const notesDiv = document.createElement("div");
-        notesDiv.className = "notes-tree-notes";
-        orphanNotes.forEach(n => {
-          notesDiv.appendChild(createNoteLeafButton(n));
-        });
-        orphanDiv.appendChild(notesDiv);
-        projDiv.appendChild(orphanDiv);
-      }
-    }
-
-    releases.forEach(release => {
-      const releaseNotes = projectNotes.filter(n => n.releaseId === release.id);
-
-      const relDiv = document.createElement("div");
-      relDiv.className = "notes-tree-release";
-
-      const relHeader = document.createElement("div");
-      relHeader.className = "notes-tree-release-header";
-
-      const relNameSpan = document.createElement("span");
-      relNameSpan.textContent = release.name;
-      relHeader.appendChild(relNameSpan);
-
-      const addNoteBtn = document.createElement("button");
-      addNoteBtn.className = "btn-inline-sm";
-      addNoteBtn.dataset.releaseId = release.id;
-      addNoteBtn.textContent = "+ Note";
-      addNoteBtn.addEventListener("click", e => {
-        e.stopPropagation();
-        createNoteForRelease(project.id, release.id);
-      });
-      relHeader.appendChild(addNoteBtn);
-
-      relDiv.appendChild(relHeader);
-
+    // Display all notes for this project directly under the project (no release hierarchy)
+    if (projectNotes.length > 0) {
       const notesDiv = document.createElement("div");
       notesDiv.className = "notes-tree-notes";
-      releaseNotes.forEach(n => {
+      projectNotes.forEach(n => {
         notesDiv.appendChild(createNoteLeafButton(n));
       });
-      relDiv.appendChild(notesDiv);
-      projDiv.appendChild(relDiv);
-    });
+      projDiv.appendChild(notesDiv);
+    }
 
     notesTreeEl.appendChild(projDiv);
   });
@@ -269,11 +223,9 @@ function selectNote(noteId) {
   renderNotePreview();
 
   const project = data.projects.find(p => p.id === note.projectId);
-  const release = project ? (project.releases || []).find(r => r.id === note.releaseId) : null;
   const projectName = project ? project.name : note.projectId;
-  const releaseName = release ? release.name : (note.releaseId || "(no release)");
   if (noteContextLabel) {
-    noteContextLabel.textContent = `${projectName} / ${releaseName}`;
+    noteContextLabel.textContent = projectName;
   }
 
   document.querySelectorAll(".notes-tree-note").forEach(btn => {
@@ -336,26 +288,6 @@ function createNoteForProject(projectId) {
   });
 }
 
-function createNoteForRelease(projectId, releaseId) {
-  const note = {
-    id: "note-" + generateId(),
-    projectId: projectId,
-    releaseId: releaseId,
-    title: "Untitled note",
-    content: "",
-    createdAt: Date.now(),
-    updatedAt: Date.now()
-  };
-
-  data.notes.push(note);
-  selectedNoteId = note.id;
-  selectedScratchpad = false;
-  renderNotesTree();
-  selectNote(note.id);
-  syncMutation(() => apiCreateNote(note), {
-    errorMessage: "Failed to create note"
-  });
-}
 
 function renderNotePreview() {
   if (!noteContentInput || !notePreview) return;
@@ -402,7 +334,7 @@ async function convertScratchpadToNote() {
     label: p.name
   }));
 
-  // Modal to select project, optional release, and title
+  // Modal to select project and title (notes are now 1-1 with projects)
   const result = await openModal({
     title: "Convert scratchpad to note",
     bodyHtml: `
@@ -411,12 +343,6 @@ async function convertScratchpadToNote() {
           <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px; color: var(--text-secondary);">Project</label>
           <select id="convertProjectSelect" style="width: 100%; padding: 6px 8px; border: 1px solid var(--border-light); border-radius: var(--radius-sm); font-family: var(--font); font-size: 13px; background: var(--bg-muted); color: var(--text-primary);">
             ${projectOptions.map(opt => `<option value="${opt.value}">${escapeHtml(opt.label)}</option>`).join("")}
-          </select>
-        </div>
-        <div>
-          <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px; color: var(--text-secondary);">Release (optional)</label>
-          <select id="convertReleaseSelect" style="width: 100%; padding: 6px 8px; border: 1px solid var(--border-light); border-radius: var(--radius-sm); font-family: var(--font); font-size: 13px; background: var(--bg-muted); color: var(--text-primary);">
-            <option value="">-- None --</option>
           </select>
         </div>
         <div>
@@ -438,12 +364,10 @@ async function convertScratchpadToNote() {
         className: "modal-btn-primary",
         getValues: () => {
           const projectSelect = document.getElementById("convertProjectSelect");
-          const releaseSelect = document.getElementById("convertReleaseSelect");
           const titleInput = document.getElementById("convertNoteTitle");
           const keepCheckbox = document.getElementById("convertKeepScratchpad");
           return {
             projectId: projectSelect.value,
-            releaseId: releaseSelect.value || null,
             title: titleInput.value.trim() || "Untitled note",
             keepScratchpad: keepCheckbox.checked
           };
@@ -455,32 +379,11 @@ async function convertScratchpadToNote() {
 
   if (!result || result === "__cancel__" || result === null) return;
 
-  // Populate releases on project change (attach handler dynamically)
-  const projectSelect = document.getElementById("convertProjectSelect");
-  const releaseSelect = document.getElementById("convertReleaseSelect");
-  if (projectSelect && releaseSelect) {
-    const updateReleases = () => {
-      const projectId = projectSelect.value;
-      const project = data.projects.find(p => p.id === projectId);
-      releaseSelect.innerHTML = '<option value="">-- None --</option>';
-      if (project && project.releases) {
-        project.releases.forEach(rel => {
-          const opt = document.createElement("option");
-          opt.value = rel.id;
-          opt.textContent = rel.name;
-          releaseSelect.appendChild(opt);
-        });
-      }
-    };
-    projectSelect.addEventListener("change", updateReleases);
-    updateReleases();
-  }
-
-  // Create the note
+  // Create the note (no release association - notes are now 1-1 with projects)
   const note = {
     id: "note-" + generateId(),
     projectId: result.projectId,
-    releaseId: result.releaseId,
+    releaseId: null,
     title: result.title,
     content: scratchpadContent,
     createdAt: Date.now(),
