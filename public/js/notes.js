@@ -82,10 +82,22 @@ function renderNotesTree() {
 
     const projHeader = document.createElement("div");
     projHeader.className = "notes-tree-project-header";
-    projHeader.textContent = project.name;
-    projHeader.addEventListener("click", () => {
+    const projNameSpan = document.createElement("span");
+    projNameSpan.textContent = project.name;
+    projNameSpan.addEventListener("click", () => {
       projDiv.classList.toggle("collapsed");
     });
+    projHeader.appendChild(projNameSpan);
+
+    const addProjNoteBtn = document.createElement("button");
+    addProjNoteBtn.className = "btn-inline-sm";
+    addProjNoteBtn.textContent = "+ Note";
+    addProjNoteBtn.addEventListener("click", e => {
+      e.stopPropagation();
+      createNoteForProject(project.id);
+    });
+    projHeader.appendChild(addProjNoteBtn);
+
     projDiv.appendChild(projHeader);
 
     if (releases.length === 0) {
@@ -239,6 +251,24 @@ function showNotesEmptyState() {
 function showNotesEditorContent() {
   if (notesEditorEmpty) notesEditorEmpty.classList.add("hidden");
   if (notesEditorContent) notesEditorContent.classList.remove("hidden");
+}
+
+function createNoteForProject(projectId) {
+  const note = {
+    id: "note-" + generateId(),
+    projectId: projectId,
+    releaseId: null,
+    title: "Untitled note",
+    content: "",
+    createdAt: Date.now(),
+    updatedAt: Date.now()
+  };
+
+  data.notes.push(note);
+  selectedNoteId = note.id;
+  saveDataToServer();
+  renderNotesTree();
+  selectNote(note.id);
 }
 
 function createNoteForRelease(projectId, releaseId) {
