@@ -476,13 +476,59 @@ if (headerTypeToggle) {
   headerTypeToggle.addEventListener("click", toggleProjectType);
 }
 
+// --- SessionStorage cache (instant navigation) ---
+
+const CACHE_KEY = 'backlog_cache_v1';
+
+function saveCache(data, config) {
+  try {
+    const payload = JSON.stringify({ data, config, ts: Date.now() });
+    // sessionStorage quota is ~5MB; our data is usually <50KB, safe
+    sessionStorage.setItem(CACHE_KEY, payload);
+  } catch (e) {
+    // sessionStorage full or unavailable — silently ignore
+  }
+}
+
+function loadCache() {
+  try {
+    const raw = sessionStorage.getItem(CACHE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch (e) {
+    return null;
+  }
+}
+
 // --- Init (auto-load) ---
 
 (async function init() {
-  await loadConfig();
-  await loadDataFromServer();
-  renderStatusBar();
-  renderHeaderTypeToggle();
-  // Dispatch event so page-specific scripts can render
-  document.dispatchEvent(new CustomEvent("app:ready"));
+  const cached = loadCache();
+
+  if (cached) {
+    // ── Instant render from cache ──
+    config = cached.config;
+    data = cached.data;
+    renderStatusBar();
+    renderHeaderTypeToggle();
+    // Schedule app:ready as a microtask so it runs AFTER all synchronous
+    // <script> tags (especially the page-specific script) have loaded and
+    // registered their listeners — otherwise the event would fire too early.
+    Promise.resolve().then(() => {
+      document.dispatchEvent(new CustomEvent("app:ready"));
+    });
+  } else {
+    // ── Fresh load from server ──
+    await Promise.all([loadConfig(), loadDataFromServer()]);
+    saveCache(data, config);
+    renderStatusBar();
+    renderHeaderTypeToggle();
+    document.dispatchEvent(new CustomEvent("app:ready"));
+  }
 })();
+
+// Cache data on unload so the next page in this tab gets the latest state
+// (including any in-memory edits that haven't been saved to the server yet).
+window.addEventListener('beforeunload', () => {
+  saveCache(data, config);
+});
