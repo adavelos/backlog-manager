@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Export env var so Node/Express can read it
-export BACKLOG_DATA_DIR=/home/adavelos/.backlog/data \
+export BACKLOG_DATA_DIR=/home/adavelos/.backlog/data
 
 echo "Starting Backlog Manager..."
 echo "  DATA_DIR = $BACKLOG_DATA_DIR"
@@ -13,5 +13,9 @@ if [ ! -d "node_modules" ]; then
   npm install
 fi
 
-# Start the server
-npm start
+# Start the server in the background
+npm start &
+
+# Save the PID so it can be stopped later
+echo $! > /tmp/backlog-manager.pid
+echo "Backlog Manager started in background (PID: $(cat /tmp/backlog-manager.pid))"

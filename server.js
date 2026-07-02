@@ -35,6 +35,8 @@ function readBacklog() {
     }
   } catch (err) {
     console.error('Error reading backlog data:', err.message);
+    // Return null to signal read failure; caller will detect and reject with 5xx
+    return null;
   }
   return { projects: [], items: [] };
 }
@@ -44,7 +46,18 @@ function writeBacklog(data) {
     if (!fs.existsSync(DATA_DIR)) {
       fs.mkdirSync(DATA_DIR, { recursive: true });
     }
-    fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2), 'utf-8');
+    // Write to a temporary file first, then atomically rename it.
+    const tempFile = DATA_FILE + '.tmp';
+    fs.writeFileSync(tempFile, JSON.stringify(data, null, 2), 'utf-8');
+
+    // Before renaming, create a backup of the current file (if it exists).
+    if (fs.existsSync(DATA_FILE)) {
+      const backupFile = DATA_FILE + '.bak';
+      fs.copyFileSync(DATA_FILE, backupFile);
+    }
+
+    // Atomically replace the old file with the new one.
+    fs.renameSync(tempFile, DATA_FILE);
     return true;
   } catch (err) {
     console.error('Error writing backlog data:', err.message);
@@ -65,6 +78,12 @@ app.get('/api/config', (req, res) => {
 // GET /api/backlog — return the full JSON snapshot
 app.get('/api/backlog', (req, res) => {
   const data = readBacklog();
+  if (data === null) {
+    return res.status(500).json({
+      status: 'error',
+      message: 'Failed to read or parse backlog data. Check server logs. A backup may exist at ' + DATA_FILE + '.bak'
+    });
+  }
   res.json(data);
 });
 
