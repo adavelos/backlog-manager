@@ -358,8 +358,8 @@ function renderQuickEdit(items) {
     const thead = document.createElement("thead");
     const headRow = document.createElement("tr");
     const columns = view === "state"
-      ? ["#", "ID", "Title", "Priority", "Type", "Tags"]
-      : ["#", "ID", "Title", "Priority", "Type", "State", "Tags"];
+      ? ["#", "Title", "Priority", "Type", "Tags"]
+      : ["#", "Title", "Priority", "Type", "State", "Tags"];
     columns.forEach(text => {
       const th = document.createElement("th");
       th.textContent = text;
@@ -394,14 +394,8 @@ function renderQuickEdit(items) {
         tdHandle.appendChild(handleSpan);
         tr.appendChild(tdHandle);
 
-        const tdId = document.createElement("td");
-        tdId.style.width = "15%";
-        tdId.textContent = item.id;
-        tdId.title = item.id;
-        tr.appendChild(tdId);
-
         const tdTitle = document.createElement("td");
-        tdTitle.style.width = "30%";
+        tdTitle.style.width = "40%";
         tdTitle.textContent = item.title;
         tdTitle.title = item.title;
         tdTitle.classList.add("qe-cell-editable");
@@ -435,7 +429,7 @@ function renderQuickEdit(items) {
         }
 
         const tdTags = document.createElement("td");
-        const tagWidth = view === "state" ? "30%" : "20%";
+        const tagWidth = view === "state" ? "35%" : "25%";
         tdTags.style.width = tagWidth;
         tdTags.textContent = (item.tags || []).join(", ");
         tdTags.title = (item.tags || []).join(", ");
