@@ -44,7 +44,9 @@
             <span>Notes</span>
 
           </div>
-          <div class="notes-tree" id="notesTree"></div>
+          <div class="notes-tree" id="notesTree">
+            <!-- Scratchpad entry will be inserted at top by notes.js -->
+          </div>
         </div>
         <div class="notes-right-pane">
           <!-- Empty state -->
@@ -69,6 +71,21 @@
             <div class="notes-editor-body">
               <textarea id="noteContentInput" class="note-content-input" placeholder="Write Markdown notes here..."></textarea>
               <div id="notePreview" class="note-preview"></div>
+            </div>
+          </div>
+          <!-- Scratchpad Editor -->
+          <div class="notes-scratchpad-editor hidden" id="notesScratchpadEditor">
+            <div class="scratchpad-header">
+              <span class="scratchpad-title">Scratchpad</span>
+              <span class="scratchpad-status">Quick capture, autosaved</span>
+            </div>
+            <div class="scratchpad-body">
+              <textarea id="scratchpadInput" class="scratchpad-input" placeholder="Jot something down..."></textarea>
+            </div>
+            <div class="scratchpad-footer">
+              <button class="btn-inline-sm" id="scratchpadTimestampBtn">Insert timestamp</button>
+              <button class="btn-inline-sm" id="scratchpadConvertBtn">Convert to note</button>
+              <button class="btn-inline-sm" id="scratchpadClearBtn">Clear</button>
             </div>
           </div>
         </div>

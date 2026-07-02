@@ -58,18 +58,22 @@ async function migrate() {
     await run(db, 'DELETE FROM releases');
     await run(db, 'DELETE FROM projects');
 
+    let projOrder = 0;
     for (const p of jsonData.projects) {
       await run(db,
-        `INSERT INTO projects (id, name, type, description, repoPath) VALUES (?, ?, ?, ?, ?)`,
-        [p.id, p.name, p.type, p.description || '', p.repoPath || '']
+        `INSERT INTO projects (id, name, type, description, repoPath, sortOrder) VALUES (?, ?, ?, ?, ?, ?)`,
+        [p.id, p.name, p.type, p.description || '', p.repoPath || '', p.sortOrder ?? projOrder]
       );
+      let relOrder = 0;
       for (const r of (p.releases || [])) {
         await run(db,
-          `INSERT INTO releases (id, projectId, name, state, description, startDate, endDate, note)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-          [r.id, p.id, r.name, r.state || 'PLANNED', r.description || '', r.startDate || null, r.endDate || null, r.note || '']
+          `INSERT INTO releases (id, projectId, name, state, description, startDate, endDate, note, sortOrder)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [r.id, p.id, r.name, r.state || 'PLANNED', r.description || '', r.startDate || null, r.endDate || null, r.note || '', r.sortOrder ?? relOrder]
         );
+        relOrder++;
       }
+      projOrder++;
     }
 
     let sortOrder = 0;

@@ -564,9 +564,8 @@ body {
   background: var(--bg-surface);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-xl);
-  width: 560px;
-  max-width: 92vw;
-  max-height: 85vh;
+  width: min(92vw, 1100px);
+  max-height: 92vh;
   overflow: hidden;
   animation: slideUp 0.2s ease;
   transition: width 0.2s ease, height 0.2s ease, max-height 0.2s ease;
@@ -575,9 +574,9 @@ body {
 }
 
 .modal-dialog.maximized {
-  width: 92vw;
-  max-width: 1200px;
-  max-height: 92vh;
+  width: 98vw;
+  max-width: none;
+  max-height: 98vh;
 }
 
 .modal-header {

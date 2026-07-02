@@ -1,7 +1,12 @@
 {
   "permissions": {
     "allow": [
-      "Bash(python3 -c ' *)"
+      "Bash(python3 -c ' *)",
+      "Skill(run)",
+      "Bash(npm start *)",
+      "Bash(curl -s http://localhost:3000/boards.html)",
+      "Bash(git add *)",
+      "Bash(git commit -m 'Remove ID column from Quick Edit table *)"
     ]
   }
 }

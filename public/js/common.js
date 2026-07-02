@@ -3,7 +3,7 @@
 // ============================================
 
 // --- Global state ---
-let data = { projects: [], items: [], notes: [] };
+let data = { projects: [], items: [], notes: [], scratchpads: { work: { content: "", createdAt: 0, updatedAt: 0 }, argonath: { content: "", createdAt: 0, updatedAt: 0 } } };
 let config = { dataDir: "", dataFile: "" };
 let activeProjectType = "work";  // "work" | "argonath"
 let currentProjectId = "ALL";
@@ -50,16 +50,14 @@ async function loadDataFromServer() {
       return;
     }
     data = await resp.json();
-    // Backwards compatibility: ensure all releases and projects have a description field
+    // Backwards compatibility: ensure missing fields exist
     for (const project of data.projects) {
-      if (project.description === undefined) {
-        project.description = "";
-      }
+      if (project.description === undefined) project.description = "";
+      if (project.sortOrder === undefined) project.sortOrder = 0;
       if (project.releases) {
         for (const release of project.releases) {
-          if (release.description === undefined) {
-            release.description = "";
-          }
+          if (release.description === undefined) release.description = "";
+          if (release.sortOrder === undefined) release.sortOrder = 0;
         }
       }
     }
@@ -67,6 +65,19 @@ async function loadDataFromServer() {
     if (!data.notes) {
       data.notes = [];
     }
+    // Scratchpads stored separately from structured notes: each project type
+    // (work/argonath) gets a single persistent scratchpad for ultra-fast capture
+    // without requiring title/project/release selection. Stored in data root,
+    // not in data.notes, to keep them independent from the note hierarchy.
+    if (!data.scratchpads) {
+      data.scratchpads = {};
+    }
+    ["work", "argonath"].forEach(type => {
+      if (!data.scratchpads[type]) {
+        const now = Date.now();
+        data.scratchpads[type] = { content: "", createdAt: now, updatedAt: now };
+      }
+    });
   } catch (e) {
     console.error("Failed to load backlog", e);
   }

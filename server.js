@@ -50,6 +50,35 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // --- Database initialization ---
 
+function runSchema(sql) {
+  return new Promise((resolve, reject) => {
+    db.exec(sql, (err) => {
+      if (err) return reject(err);
+      resolve();
+    });
+  });
+}
+
+async function migrateDB() {
+  // Add sortOrder column to projects if missing (migration for existing DBs)
+  try {
+    await dbRun("ALTER TABLE projects ADD COLUMN sortOrder REAL NOT NULL DEFAULT 0");
+    log.info('Migration: added sortOrder to projects');
+  } catch (e) {
+    if (!e.message.includes('duplicate column')) {
+      log.warn('Migration (projects.sortOrder): ' + e.message);
+    }
+  }
+  try {
+    await dbRun("ALTER TABLE releases ADD COLUMN sortOrder REAL NOT NULL DEFAULT 0");
+    log.info('Migration: added sortOrder to releases');
+  } catch (e) {
+    if (!e.message.includes('duplicate column')) {
+      log.warn('Migration (releases.sortOrder): ' + e.message);
+    }
+  }
+}
+
 function initDB() {
   return new Promise((resolve, reject) => {
     if (!fs.existsSync(DATA_DIR)) {
@@ -63,24 +92,26 @@ function initDB() {
       }
 
       // Enable foreign keys
-      db.run('PRAGMA foreign_keys = ON', (err) => {
+      db.run('PRAGMA foreign_keys = ON', async (err) => {
         if (err) return reject(err);
 
         // Enable WAL mode for crash safety
-        db.run('PRAGMA journal_mode = WAL', (err) => {
+        db.run('PRAGMA journal_mode = WAL', async (err) => {
           if (err) return reject(err);
 
-          // Load and execute schema
-          const schema = fs.readFileSync(path.join(__dirname, 'db/init.sql'), 'utf-8');
-          db.exec(schema, (err) => {
-            if (err) {
-              log.error('Failed to initialize schema: ' + err.message);
-              return reject(err);
-            }
+          try {
+            // Load and execute schema
+            const schema = fs.readFileSync(path.join(__dirname, 'db/init.sql'), 'utf-8');
+            await runSchema(schema);
+            // Run migrations for existing databases
+            await migrateDB();
             log.info('SQLite initialized at ' + DB_PATH);
             log.info('WAL mode enabled for crash safety');
             resolve();
-          });
+          } catch (err) {
+            log.error('Failed to initialize schema: ' + err.message);
+            return reject(err);
+          }
         });
       });
     });
@@ -127,14 +158,23 @@ function parseItemRow(row) {
 // --- Aggregate read (initial page load only) ---
 
 async function readBacklogFromDB() {
-  const projects = await dbAll('SELECT * FROM projects ORDER BY name');
-  const releases = await dbAll('SELECT * FROM releases ORDER BY projectId, name');
+  const projects = await dbAll('SELECT * FROM projects ORDER BY sortOrder, name');
+  const releases = await dbAll('SELECT * FROM releases ORDER BY sortOrder, name');
   projects.forEach(p => {
     p.releases = releases.filter(r => r.projectId === p.id);
   });
   const items = await dbAll('SELECT * FROM items ORDER BY sortOrder');
   const notes = await dbAll('SELECT * FROM notes ORDER BY projectId');
-  return { projects, items: items.map(parseItemRow), notes };
+  const scratchpadRows = await dbAll('SELECT * FROM scratchpads ORDER BY type');
+  const scratchpads = {};
+  scratchpadRows.forEach(row => {
+    scratchpads[row.type] = {
+      content: row.content,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt
+    };
+  });
+  return { projects, items: items.map(parseItemRow), notes, scratchpads };
 }
 
 // --- API endpoints ---
@@ -167,8 +207,8 @@ app.get('/api/backlog', async (req, res) => {
 
 app.get('/api/projects', async (req, res) => {
   try {
-    const projects = await dbAll('SELECT * FROM projects ORDER BY name');
-    const releases = await dbAll('SELECT * FROM releases ORDER BY projectId, name');
+    const projects = await dbAll('SELECT * FROM projects ORDER BY sortOrder, name');
+    const releases = await dbAll('SELECT * FROM releases ORDER BY sortOrder, name');
     projects.forEach(p => {
       p.releases = releases.filter(r => r.projectId === p.id);
     });
@@ -186,8 +226,8 @@ app.post('/api/projects', async (req, res) => {
   }
   try {
     await dbRun(
-      `INSERT INTO projects (id, name, type, description, repoPath) VALUES (?, ?, ?, ?, ?)`,
-      [p.id, p.name, p.type, p.description || '', p.repoPath || '']
+      `INSERT INTO projects (id, name, type, description, repoPath, sortOrder) VALUES (?, ?, ?, ?, ?, ?)`,
+      [p.id, p.name, p.type, p.description || '', p.repoPath || '', p.sortOrder ?? 0]
     );
     const created = await dbGet('SELECT * FROM projects WHERE id = ?', [p.id]);
     created.releases = [];
@@ -201,7 +241,7 @@ app.post('/api/projects', async (req, res) => {
 
 app.patch('/api/projects/:id', async (req, res) => {
   const { id } = req.params;
-  const fields = ['name', 'type', 'description', 'repoPath'];
+  const fields = ['name', 'type', 'description', 'repoPath', 'sortOrder'];
   const updates = [];
   const params = [];
   fields.forEach(f => {
@@ -255,9 +295,9 @@ app.post('/api/projects/:projectId/releases', async (req, res) => {
   }
   try {
     await dbRun(
-      `INSERT INTO releases (id, projectId, name, state, description, startDate, endDate, note)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [r.id, projectId, r.name, r.state || 'PLANNED', r.description || '', r.startDate || null, r.endDate || null, r.note || '']
+      `INSERT INTO releases (id, projectId, name, state, description, startDate, endDate, note, sortOrder)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [r.id, projectId, r.name, r.state || 'PLANNED', r.description || '', r.startDate || null, r.endDate || null, r.note || '', r.sortOrder ?? 0]
     );
     const created = await dbGet('SELECT * FROM releases WHERE id = ?', [r.id]);
     log.info('Release created: ' + r.id);
@@ -270,7 +310,7 @@ app.post('/api/projects/:projectId/releases', async (req, res) => {
 
 app.patch('/api/releases/:id', async (req, res) => {
   const { id } = req.params;
-  const fields = ['name', 'state', 'description', 'startDate', 'endDate', 'note'];
+  const fields = ['name', 'state', 'description', 'startDate', 'endDate', 'note', 'sortOrder'];
   const updates = [];
   const params = [];
   fields.forEach(f => {
@@ -502,6 +542,47 @@ app.delete('/api/notes/:id', async (req, res) => {
   } catch (err) {
     log.error('Error deleting note: ' + err.message);
     res.status(500).json({ status: 'error', message: 'Failed to delete note' });
+  }
+});
+
+// ============================================================
+// Scratchpads
+// ============================================================
+
+app.patch('/api/scratchpads/:type', async (req, res) => {
+  const { type } = req.params;
+  if (!['work', 'argonath'].includes(type)) {
+    return res.status(400).json({ status: 'error', message: 'Invalid scratchpad type' });
+  }
+  const fields = ['content'];
+  const updates = [];
+  const params = [];
+  fields.forEach(f => {
+    if (req.body[f] !== undefined) {
+      updates.push(`${f} = ?`);
+      params.push(req.body[f]);
+    }
+  });
+  if (updates.length === 0) {
+    return res.status(400).json({ status: 'error', message: 'No fields to update' });
+  }
+  updates.push('updatedAt = unixepoch()');
+  params.push(type);
+  try {
+    const result = await dbRun(`UPDATE scratchpads SET ${updates.join(', ')} WHERE type = ?`, params);
+    if (result.changes === 0) {
+      return res.status(404).json({ status: 'error', message: 'Scratchpad not found' });
+    }
+    const updated = await dbGet('SELECT * FROM scratchpads WHERE type = ?', [type]);
+    log.info('Scratchpad updated: ' + type);
+    res.json({
+      content: updated.content,
+      createdAt: updated.createdAt,
+      updatedAt: updated.updatedAt
+    });
+  } catch (err) {
+    log.error('Error updating scratchpad: ' + err.message);
+    res.status(500).json({ status: 'error', message: 'Failed to update scratchpad' });
   }
 });
 

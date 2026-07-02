@@ -41,6 +41,10 @@ window.addEventListener("popstate", () => {
   renderAll();
 });
 
+// --- Drag-and-drop state ---
+let _draggedProjectEl = null;
+let _draggedReleaseEl = null;
+
 // --- Rendering: manage view ---
 
 function renderManageView() {
@@ -48,9 +52,19 @@ function renderManageView() {
   renderReleasesManageList();
 }
 
+function computeSortOrder(prevItem, nextItem) {
+  const prev = prevItem ? prevItem.sortOrder : null;
+  const next = nextItem ? nextItem.sortOrder : null;
+  if (prev == null && next == null) return 0;
+  if (prev == null) return next - 1;
+  if (next == null) return prev + 1;
+  return (prev + next) / 2;
+}
+
 function renderProjectsManageList() {
   projectsManageListEl.innerHTML = "";
-  const scopeProjects = data.projects.filter(p => p.type === activeProjectType);
+  const scopeProjects = data.projects.filter(p => p.type === activeProjectType)
+    .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
 
   if (scopeProjects.length === 0) {
     const empty = document.createElement("div");
@@ -70,6 +84,18 @@ function renderProjectsManageList() {
   scopeProjects.forEach(project => {
     const itemEl = document.createElement("div");
     itemEl.className = "manage-item" + (selectedProjectId === project.id ? " selected" : "");
+    itemEl.draggable = true;
+
+    const dragHandle = document.createElement("span");
+    dragHandle.className = "drag-handle";
+    dragHandle.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg>`;
+    dragHandle.title = "Drag to reorder";
+    itemEl.appendChild(dragHandle);
+
+    const orderBadge = document.createElement("span");
+    orderBadge.className = "order-badge";
+    orderBadge.textContent = (scopeProjects.indexOf(project) + 1).toString();
+    itemEl.appendChild(orderBadge);
 
     const contentEl = document.createElement("div");
     contentEl.className = "manage-item-content";
@@ -143,6 +169,26 @@ function renderProjectsManageList() {
 
     itemEl.appendChild(actionsEl);
 
+    // Drag events — projects (source + visual feedback; reorder/drop handled on container)
+    itemEl.addEventListener("dragstart", e => {
+      _draggedProjectEl = itemEl;
+      e.dataTransfer.effectAllowed = "move";
+      e.dataTransfer.setData("text/plain", project.id);
+      itemEl.classList.add("dragging");
+    });
+    itemEl.addEventListener("dragend", () => {
+      _draggedProjectEl = null;
+      itemEl.classList.remove("dragging");
+      [...projectsManageListEl.querySelectorAll(".manage-item.dragover")].forEach(el => el.classList.remove("dragover"));
+    });
+    itemEl.addEventListener("dragenter", e => {
+      e.preventDefault();
+      itemEl.classList.add("dragover");
+    });
+    itemEl.addEventListener("dragleave", () => {
+      itemEl.classList.remove("dragover");
+    });
+
     itemEl.addEventListener("click", () => {
       selectedProjectId = project.id;
       renderManageView();
@@ -150,6 +196,19 @@ function renderProjectsManageList() {
 
     projectsManageListEl.appendChild(itemEl);
   });
+}
+
+function getDragAfterElement(container, y, selector) {
+  const draggableElements = [...container.querySelectorAll(selector + ":not(.dragging)")];
+  return draggableElements.reduce((closest, child) => {
+    const box = child.getBoundingClientRect();
+    const offset = y - box.top - box.height / 2;
+    if (offset < 0 && offset > closest.offset) {
+      return { offset, element: child };
+    } else {
+      return closest;
+    }
+  }, { offset: Number.NEGATIVE_INFINITY }).element;
 }
 
 function renderReleasesManageList() {
@@ -179,7 +238,8 @@ function renderReleasesManageList() {
   }
 
   releasesManageTitleEl.textContent = `Releases \u2014 ${project.name}`;
-  const releases = project.releases || [];
+  const releases = (project.releases || []).slice()
+    .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
 
   if (releases.length === 0) {
     const empty = document.createElement("div");
@@ -199,6 +259,18 @@ function renderReleasesManageList() {
   releases.forEach(release => {
     const itemEl = document.createElement("div");
     itemEl.className = "manage-item";
+    itemEl.draggable = true;
+
+    const dragHandle = document.createElement("span");
+    dragHandle.className = "drag-handle";
+    dragHandle.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg>`;
+    dragHandle.title = "Drag to reorder";
+    itemEl.appendChild(dragHandle);
+
+    const orderBadge = document.createElement("span");
+    orderBadge.className = "order-badge";
+    orderBadge.textContent = (releases.indexOf(release) + 1).toString();
+    itemEl.appendChild(orderBadge);
 
     const contentEl = document.createElement("div");
     contentEl.className = "manage-item-content";
@@ -248,6 +320,26 @@ function renderReleasesManageList() {
 
     itemEl.appendChild(actionsEl);
 
+    // Drag events — releases (source + visual feedback; reorder/drop handled on container)
+    itemEl.addEventListener("dragstart", e => {
+      _draggedReleaseEl = itemEl;
+      e.dataTransfer.effectAllowed = "move";
+      e.dataTransfer.setData("text/plain", release.id);
+      itemEl.classList.add("dragging");
+    });
+    itemEl.addEventListener("dragend", () => {
+      _draggedReleaseEl = null;
+      itemEl.classList.remove("dragging");
+      [...releasesManageListEl.querySelectorAll(".manage-item.dragover")].forEach(el => el.classList.remove("dragover"));
+    });
+    itemEl.addEventListener("dragenter", e => {
+      e.preventDefault();
+      itemEl.classList.add("dragover");
+    });
+    itemEl.addEventListener("dragleave", () => {
+      itemEl.classList.remove("dragover");
+    });
+
     itemEl.addEventListener("click", (e) => {
       if (!e.target.closest(".manage-item-actions")) {
         openReleaseDetail(project.id, release.id);
@@ -292,12 +384,15 @@ async function addProject() {
 
   if (!result || result === "__cancel__") return;
 
+  const scopeProjects = data.projects.filter(p => p.type === activeProjectType);
+  const maxOrder = scopeProjects.reduce((max, p) => Math.max(max, p.sortOrder || 0), 0);
   const project = {
     id: "proj-" + generateId(),
     name: result.name,
     description: result.description || "",
     type: activeProjectType,
     repoPath: "",
+    sortOrder: maxOrder + 1,
     releases: []
   };
 
@@ -441,6 +536,8 @@ async function addRelease() {
   };
 
   if (!project.releases) project.releases = [];
+  const maxOrder = project.releases.reduce((max, r) => Math.max(max, r.sortOrder || 0), 0);
+  release.sortOrder = maxOrder + 1;
   project.releases.push(release);
 
   renderAll();
@@ -555,6 +652,97 @@ function renderAll() {
   saveStateToUrl();
 }
 
+// --- Container-level DnD handlers (set up once) ---
+
+function setupContainerDnD() {
+  // --- Projects container ---
+  projectsManageListEl.addEventListener("dragenter", e => e.preventDefault());
+  projectsManageListEl.addEventListener("dragover", e => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    const afterElement = getDragAfterElement(projectsManageListEl, e.clientY, ".manage-item");
+    if (_draggedProjectEl) {
+      if (afterElement) {
+        projectsManageListEl.insertBefore(_draggedProjectEl, afterElement);
+      } else {
+        projectsManageListEl.appendChild(_draggedProjectEl);
+      }
+    }
+  });
+  projectsManageListEl.addEventListener("drop", e => {
+    e.preventDefault();
+    [...projectsManageListEl.querySelectorAll(".manage-item.dragover")].forEach(el => el.classList.remove("dragover"));
+    const draggedId = e.dataTransfer.getData("text/plain");
+    if (!draggedId) return;
+    const dragged = data.projects.find(p => p.id === draggedId);
+    if (!dragged) return;
+    const orderedEls = projectsManageListEl.querySelectorAll(".manage-item");
+    const orderedIds = Array.from(orderedEls).map(el => {
+      const titleEl = el.querySelector(".manage-item-title");
+      if (!titleEl) return null;
+      const found = data.projects.find(p => p.name === titleEl.textContent);
+      return found ? found.id : null;
+    }).filter(Boolean);
+    const sortedProjects = orderedIds.map(id => data.projects.find(p => p.id === id)).filter(Boolean);
+    sortedProjects.forEach((p, idx) => {
+      const prev = sortedProjects[idx - 1] || null;
+      const next = sortedProjects[idx + 1] || null;
+      p.sortOrder = computeSortOrder(prev, next);
+    });
+    renderManageView();
+    sortedProjects.forEach(p => {
+      syncMutation(() => apiUpdateProject(p.id, { sortOrder: p.sortOrder }), {
+        errorMessage: "Failed to reorder project"
+      });
+    });
+  });
+
+  // --- Releases container ---
+  releasesManageListEl.addEventListener("dragenter", e => e.preventDefault());
+  releasesManageListEl.addEventListener("dragover", e => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    const afterElement = getDragAfterElement(releasesManageListEl, e.clientY, ".manage-item");
+    if (_draggedReleaseEl) {
+      if (afterElement) {
+        releasesManageListEl.insertBefore(_draggedReleaseEl, afterElement);
+      } else {
+        releasesManageListEl.appendChild(_draggedReleaseEl);
+      }
+    }
+  });
+  releasesManageListEl.addEventListener("drop", e => {
+    e.preventDefault();
+    [...releasesManageListEl.querySelectorAll(".manage-item.dragover")].forEach(el => el.classList.remove("dragover"));
+    const draggedId = e.dataTransfer.getData("text/plain");
+    if (!draggedId) return;
+    const project = data.projects.find(p => p.id === selectedProjectId);
+    if (!project || !project.releases) return;
+    const dragged = project.releases.find(r => r.id === draggedId);
+    if (!dragged) return;
+    const orderedEls = releasesManageListEl.querySelectorAll(".manage-item");
+    const orderedIds = Array.from(orderedEls).map(el => {
+      const titleEl = el.querySelector(".manage-item-title");
+      if (!titleEl) return null;
+      const text = titleEl.textContent || "";
+      const found = project.releases.find(r => text.startsWith(r.name));
+      return found ? found.id : null;
+    }).filter(Boolean);
+    const sortedReleases = orderedIds.map(id => project.releases.find(r => r.id === id)).filter(Boolean);
+    sortedReleases.forEach((r, idx) => {
+      const prev = sortedReleases[idx - 1] || null;
+      const next = sortedReleases[idx + 1] || null;
+      r.sortOrder = computeSortOrder(prev, next);
+    });
+    renderManageView();
+    sortedReleases.forEach(r => {
+      syncMutation(() => apiUpdateRelease(r.id, { sortOrder: r.sortOrder }), {
+        errorMessage: "Failed to reorder release"
+      });
+    });
+  });
+}
+
 // --- Event wiring ---
 
 if (addProjectBtn) {
@@ -570,4 +758,5 @@ if (addReleaseBtn) {
 document.addEventListener("app:ready", () => {
   loadStateFromUrl();
   renderAll();
+  setupContainerDnD();
 });

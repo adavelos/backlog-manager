@@ -12,10 +12,14 @@ if [ ! -d "node_modules" ]; then
   npm install
 fi
 
-# Start the server in the background
-npm start &
+LOG_FILE="/tmp/backlog-manager.log"
+
+# Start the server in the background, detached from the terminal
+nohup npm start > "$LOG_FILE" 2>&1 &
 
 # Save the PID so it can be stopped later
-echo $! > /tmp/backlog-manager.pid
-echo "Backlog Manager started in background (PID: $(cat /tmp/backlog-manager.pid))"
-echo "Logs: /tmp/backlog-manager.log"
+PID=$!
+echo $PID > /tmp/backlog-manager.pid
+echo "Backlog Manager started in background (PID: $PID)"
+echo "Logs: $LOG_FILE"
+echo "Check status: curl -s http://localhost:3000/api/config | head -c 200"

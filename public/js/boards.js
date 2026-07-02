@@ -74,7 +74,8 @@ window.addEventListener("popstate", () => {
 
 function renderProjectChips() {
   projectChipsEl.innerHTML = "";
-  const scopeProjects = data.projects.filter(p => p.type === activeProjectType);
+  const scopeProjects = data.projects.filter(p => p.type === activeProjectType)
+    .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
 
   const allChip = document.createElement("button");
   allChip.className = "chip chip-project" + (currentProjectId === "ALL" ? " active" : "");
@@ -243,7 +244,8 @@ function renderReleaseBoard(items) {
   }
   const project = data.projects.find(p => p.id === currentProjectId);
   if (!project) return;
-  const releases = (project.releases || []).filter(r => r.state !== "ARCHIVED");
+  const releases = (project.releases || []).filter(r => r.state !== "ARCHIVED")
+    .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
 
   const groups = { NO_RELEASE: [] };
   releases.forEach(r => (groups[r.id] = []));
@@ -338,7 +340,8 @@ function renderQuickEdit(items) {
     }
     const project = data.projects.find(p => p.id === currentProjectId);
     if (!project) return;
-    const releases = (project.releases || []).filter(r => r.state !== "ARCHIVED");
+  const releases = (project.releases || []).filter(r => r.state !== "ARCHIVED")
+    .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
     const byReleaseId = {};
     const releaseIds = ["NO_RELEASE"].concat(releases.map(r => r.id));
     releaseIds.forEach(id => { byReleaseId[id] = []; });
@@ -774,7 +777,7 @@ async function openItemDetail(itemId) {
   if (!item) return;
 
   const project = data.projects.find(p => p.id === item.projectId);
-  const releases = project ? project.releases || [] : [];
+  const releases = project ? (project.releases || []).slice().sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0)) : [];
 
   const stateOpts = ["BACKLOG", "TODO", "ONGOING", "DONE"]
     .map(s => `<option value="${s}"${s === item.state ? " selected" : ""}>${s}</option>`).join("");
@@ -823,13 +826,21 @@ async function openItemDetail(itemId) {
         <input class="if-input" id="idTitle" type="text" value="${escapeHtml(item.title)}">
       </div>
 
-      <div class="if-row">
-        <div class="if-field">
-          <div class="if-label">Priority</div>
+      <div class="if-field">
+        <div class="if-label">Analysis</div>
+        <textarea class="if-input if-textarea" id="idAnalysis" rows="3">${escapeHtml(item.analysis || "")}</textarea>
+      </div>
+
+      <div class="if-field">
+        <div class="if-label-inline">
+          <span class="if-label">Priority</span>
           <div class="if-opts">${priorityRadios}</div>
         </div>
-        <div class="if-field">
-          <div class="if-label">Type</div>
+      </div>
+
+      <div class="if-field">
+        <div class="if-label-inline">
+          <span class="if-label">Type</span>
           <div class="if-opts">${typeRadios}</div>
         </div>
       </div>
@@ -840,11 +851,6 @@ async function openItemDetail(itemId) {
           <input class="if-input" id="idTags" type="text" value="${escapeHtml(tagsVal)}" autocomplete="off">
           <div class="tag-suggestions" id="idTagSuggestions"></div>
         </div>
-      </div>
-
-      <div class="if-field">
-        <div class="if-label">Analysis</div>
-        <textarea class="if-input if-textarea" id="idAnalysis" rows="3">${escapeHtml(item.analysis || "")}</textarea>
       </div>
 
       <div class="if-field">
@@ -865,9 +871,9 @@ async function openItemDetail(itemId) {
       <div class="if-field">
         <div class="if-label">Subitems <span style="font-weight:400;color:var(--text-muted);font-size:10px">(check to mark done, click \u00d7 to delete)</span></div>
         <div id="idSubitems">${subitemsHtml}</div>
-        <div style="display:flex;gap:4px;margin-top:4px">
-          <input class="if-input" id="idNewSubitem" type="text" placeholder="Add subitem\u2026" style="flex:1;margin-top:0">
-          <button class="modal-btn modal-btn-primary" id="idAddSubitemBtn" style="padding:7px 12px;font-size:12px">+</button>
+        <div class="subitem-add-row">
+          <input class="if-input" id="idNewSubitem" type="text" placeholder="Add subitem\u2026">
+          <button class="add-subitem-btn" id="idAddSubitemBtn" title="Add subitem">+</button>
         </div>
       </div>
     </div>`;
@@ -876,6 +882,8 @@ async function openItemDetail(itemId) {
     title: "Edit item",
     bodyHtml,
     onOpen: () => {
+      const titleEl = document.getElementById("idTitle");
+      if (titleEl) setTimeout(() => titleEl.focus(), 100);
       const modalHeaderEl = document.querySelector(".modal-header");
       if (modalHeaderEl && !modalHeaderEl.querySelector(".modal-prompt-btn")) {
         const promptBtn = document.createElement("button");
@@ -928,6 +936,7 @@ async function openItemDetail(itemId) {
         newInput.addEventListener("keydown", e => {
           if (e.key === "Enter") {
             e.preventDefault();
+            e.stopPropagation();
             addSubitem();
           }
         });
@@ -937,7 +946,7 @@ async function openItemDetail(itemId) {
     buttons: [
       { label: "Cancel", value: "__cancel__", className: "modal-btn-cancel" },
       { label: "Delete", className: "modal-btn-danger", value: "__delete__" },
-      { label: "Save", className: "modal-btn-primary", focused: true, getValues: () => "__save__" }
+      { label: "Save", className: "modal-btn-primary", getValues: () => "__save__" }
     ]
   });
 
@@ -1021,7 +1030,8 @@ async function openItemDetail(itemId) {
 // --- Add item modal ---
 
 async function addItem(targetState) {
-  const filteredProjects = data.projects.filter(p => p.type === activeProjectType);
+  const filteredProjects = data.projects.filter(p => p.type === activeProjectType)
+    .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
 
   if (filteredProjects.length === 0) {
     await showPrompt("No projects", "Create a project first in Projects & Releases.", "");
@@ -1035,7 +1045,7 @@ async function addItem(targetState) {
 
   const project = data.projects.find(p => p.id === chosenProjectId);
   const projectName = project ? project.name : "Unknown";
-  const releases = project ? project.releases || [] : [];
+  const releases = project ? (project.releases || []).slice().sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0)) : [];
 
   const projectOpts = filteredProjects.map(p =>
     `<option value="${p.id}"${p.id === chosenProjectId ? " selected" : ""}>${p.name}</option>`
@@ -1073,15 +1083,22 @@ async function addItem(targetState) {
           </div>
         </div>
         <div class="if-field">
+          <div class="if-label">Title</div>
           <input class="if-input" id="modalInput" type="text" placeholder="What needs to be done?">
         </div>
-        <div class="if-row">
-          <div class="if-field">
-            <div class="if-label">Priority</div>
+        <div class="if-field">
+          <div class="if-label">Analysis</div>
+          <textarea class="if-input if-textarea" id="ifAnalysis" rows="3" placeholder="Notes, analysis, context\u2026"></textarea>
+        </div>
+        <div class="if-field">
+          <div class="if-label-inline">
+            <span class="if-label">Priority</span>
             <div class="if-opts">${priorityRadios}</div>
           </div>
-          <div class="if-field">
-            <div class="if-label">Type</div>
+        </div>
+        <div class="if-field">
+          <div class="if-label-inline">
+            <span class="if-label">Type</span>
             <div class="if-opts">${typeRadios}</div>
           </div>
         </div>
@@ -1092,25 +1109,18 @@ async function addItem(targetState) {
             <div class="tag-suggestions" id="tagSuggestions"></div>
           </div>
         </div>
-        <details class="if-details">
-          <summary class="if-details-summary">Additional fields</summary>
-          <div class="if-details-body">
-            <div class="if-field">
-              <div class="if-label">Analysis</div>
-              <textarea class="if-input if-textarea" id="ifAnalysis" rows="3" placeholder="Notes, analysis, context\u2026"></textarea>
-            </div>
-            <div class="if-field">
-              <div class="if-label">Prompt</div>
-              <textarea class="if-input if-textarea" id="ifPrompt" rows="3" placeholder="AI prompt / instructions\u2026"></textarea>
-            </div>
-            <div class="if-field">
-              <div class="if-label">Files affected (comma-separated)</div>
-              <input class="if-input" id="ifFiles" type="text" placeholder="e.g. src/main.ts, src/utils.ts">
-            </div>
-          </div>
-        </details>
+        <div class="if-field">
+          <div class="if-label">Prompt</div>
+          <textarea class="if-input if-textarea" id="ifPrompt" rows="3" placeholder="AI prompt / instructions\u2026"></textarea>
+        </div>
+        <div class="if-field">
+          <div class="if-label">Files affected (comma-separated)</div>
+          <input class="if-input" id="ifFiles" type="text" placeholder="e.g. src/main.ts, src/utils.ts">
+        </div>
       </div>`,
     onOpen: () => {
+      const titleInput = document.getElementById("modalInput");
+      if (titleInput) setTimeout(() => titleInput.focus(), 100);
       const projSelect = document.getElementById("ifProject");
       const relSelect = document.getElementById("ifRelease");
       if (projSelect && relSelect) {
@@ -1131,7 +1141,6 @@ async function addItem(targetState) {
       {
         label: "Create",
         className: "modal-btn-primary",
-        focused: true,
         getValues: () => {
           const title = document.getElementById("modalInput").value.trim();
           if (!title) return "__cancel__";

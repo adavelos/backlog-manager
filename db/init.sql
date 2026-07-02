@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS projects (
   type TEXT NOT NULL CHECK(type IN ('work', 'argonath')),
   description TEXT DEFAULT '',
   repoPath TEXT DEFAULT '',
+  sortOrder REAL NOT NULL DEFAULT 0,
   createdAt INTEGER NOT NULL DEFAULT (unixepoch()),
   updatedAt INTEGER NOT NULL DEFAULT (unixepoch())
 );
@@ -22,6 +23,7 @@ CREATE TABLE IF NOT EXISTS releases (
   startDate INTEGER,
   endDate INTEGER,
   note TEXT DEFAULT '',
+  sortOrder REAL NOT NULL DEFAULT 0,
   createdAt INTEGER NOT NULL DEFAULT (unixepoch()),
   updatedAt INTEGER NOT NULL DEFAULT (unixepoch()),
   FOREIGN KEY(projectId) REFERENCES projects(id) ON DELETE CASCADE
@@ -63,6 +65,18 @@ CREATE TABLE IF NOT EXISTS notes (
   FOREIGN KEY(projectId) REFERENCES projects(id) ON DELETE CASCADE,
   FOREIGN KEY(releaseId) REFERENCES releases(id) ON DELETE CASCADE
 );
+
+-- Scratchpads table (one per project type: work, argonath)
+CREATE TABLE IF NOT EXISTS scratchpads (
+  type TEXT PRIMARY KEY CHECK(type IN ('work', 'argonath')),
+  content TEXT NOT NULL DEFAULT '',
+  createdAt INTEGER NOT NULL DEFAULT (unixepoch()),
+  updatedAt INTEGER NOT NULL DEFAULT (unixepoch())
+);
+
+-- Initialize scratchpads if they don't exist
+INSERT OR IGNORE INTO scratchpads (type, content) VALUES ('work', '');
+INSERT OR IGNORE INTO scratchpads (type, content) VALUES ('argonath', '');
 
 -- Indexes for common queries
 CREATE INDEX IF NOT EXISTS idx_items_project ON items(projectId);

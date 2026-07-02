@@ -4,6 +4,7 @@
 
 // --- Notes-specific state ---
 let selectedNoteId = null;
+let selectedScratchpad = false;  // true when scratchpad is selected
 
 // DOM refs (notes tree)
 const notesTreeEl = document.getElementById("notesTree");
@@ -18,12 +19,23 @@ const noteContextLabel = document.getElementById("noteContextLabel");
 const saveNoteBtn = document.getElementById("saveNoteBtn");
 const deleteNoteBtn = document.getElementById("deleteNoteBtn");
 
+// DOM refs (scratchpad editor)
+const notesScratchpadEditor = document.getElementById("notesScratchpadEditor");
+const scratchpadInput = document.getElementById("scratchpadInput");
+const scratchpadTimestampBtn = document.getElementById("scratchpadTimestampBtn");
+const scratchpadConvertBtn = document.getElementById("scratchpadConvertBtn");
+const scratchpadClearBtn = document.getElementById("scratchpadClearBtn");
+
 // --- URL state ---
 
 function serializeState() {
   const params = new URLSearchParams();
   if (activeProjectType !== "work") params.set("type", activeProjectType);
-  if (selectedNoteId) params.set("note", selectedNoteId);
+  if (selectedScratchpad) {
+    params.set("scratchpad", "1");
+  } else if (selectedNoteId) {
+    params.set("note", selectedNoteId);
+  }
   return params.toString();
 }
 
@@ -38,7 +50,13 @@ function saveStateToUrl() {
 function loadStateFromUrl() {
   const params = new URLSearchParams(window.location.search);
   if (params.has("type")) activeProjectType = params.get("type");
-  if (params.has("note")) selectedNoteId = params.get("note");
+  if (params.has("scratchpad")) {
+    selectedScratchpad = true;
+    selectedNoteId = null;
+  } else if (params.has("note")) {
+    selectedNoteId = params.get("note");
+    selectedScratchpad = false;
+  }
 }
 
 window.addEventListener("popstate", () => {
@@ -53,7 +71,18 @@ function renderNotesTree() {
   if (!notesTreeEl) return;
   notesTreeEl.innerHTML = "";
 
-  const scopeProjects = data.projects.filter(p => p.type === activeProjectType);
+  // Scratchpad pinned entry at top
+  const scratchpadEntry = document.createElement("div");
+  scratchpadEntry.className = "notes-scratchpad-entry";
+  const scratchpadBtn = document.createElement("button");
+  scratchpadBtn.className = "scratchpad-btn" + (selectedScratchpad ? " active" : "");
+  scratchpadBtn.textContent = "📝 Scratchpad";
+  scratchpadBtn.addEventListener("click", selectScratchpad);
+  scratchpadEntry.appendChild(scratchpadBtn);
+  notesTreeEl.appendChild(scratchpadEntry);
+
+  const scopeProjects = data.projects.filter(p => p.type === activeProjectType)
+    .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
 
   if (scopeProjects.length === 0) {
     const empty = document.createElement("div");
@@ -74,7 +103,7 @@ function renderNotesTree() {
   }
 
   scopeProjects.forEach(project => {
-    const releases = project.releases || [];
+    const releases = (project.releases || []).slice().sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
     const projectNotes = data.notes.filter(n => n.projectId === project.id);
 
     const projDiv = document.createElement("div");
@@ -160,13 +189,19 @@ function renderNotesTree() {
   });
 
   // Maintain selection state after re-render
-  if (selectedNoteId && data.notes.find(n => n.id === selectedNoteId)) {
+  if (selectedScratchpad) {
+    document.querySelectorAll(".scratchpad-btn").forEach(btn => {
+      btn.classList.toggle("active", true);
+    });
+    showScratchpadEditor();
+  } else if (selectedNoteId && data.notes.find(n => n.id === selectedNoteId)) {
     document.querySelectorAll(".notes-tree-note").forEach(btn => {
       btn.classList.toggle("active", btn.dataset.noteId === selectedNoteId);
     });
     showNotesEditorContent();
   } else {
     selectedNoteId = null;
+    selectedScratchpad = false;
     showNotesEmptyState();
   }
 }
@@ -216,6 +251,7 @@ function createNoteLeafButton(note) {
 
 function selectNote(noteId) {
   selectedNoteId = noteId;
+  selectedScratchpad = false;
   const note = data.notes.find(n => n.id === noteId);
   if (!note) {
     if (noteTitleInput) noteTitleInput.value = "";
@@ -245,14 +281,38 @@ function selectNote(noteId) {
   });
 }
 
+function selectScratchpad() {
+  selectedScratchpad = true;
+  selectedNoteId = null;
+  showScratchpadEditor();
+  document.querySelectorAll(".scratchpad-btn").forEach(btn => {
+    btn.classList.add("active");
+  });
+  if (scratchpadInput) {
+    setTimeout(() => scratchpadInput.focus(), 50);
+  }
+  saveStateToUrl();
+}
+
 function showNotesEmptyState() {
   if (notesEditorEmpty) notesEditorEmpty.classList.remove("hidden");
   if (notesEditorContent) notesEditorContent.classList.add("hidden");
+  if (notesScratchpadEditor) notesScratchpadEditor.classList.add("hidden");
 }
 
 function showNotesEditorContent() {
   if (notesEditorEmpty) notesEditorEmpty.classList.add("hidden");
   if (notesEditorContent) notesEditorContent.classList.remove("hidden");
+  if (notesScratchpadEditor) notesScratchpadEditor.classList.add("hidden");
+}
+
+function showScratchpadEditor() {
+  if (notesEditorEmpty) notesEditorEmpty.classList.add("hidden");
+  if (notesEditorContent) notesEditorContent.classList.add("hidden");
+  if (notesScratchpadEditor) notesScratchpadEditor.classList.remove("hidden");
+  if (scratchpadInput) {
+    scratchpadInput.value = data.scratchpads[activeProjectType].content || "";
+  }
 }
 
 function createNoteForProject(projectId) {
@@ -268,6 +328,7 @@ function createNoteForProject(projectId) {
 
   data.notes.push(note);
   selectedNoteId = note.id;
+  selectedScratchpad = false;
   renderNotesTree();
   selectNote(note.id);
   syncMutation(() => apiCreateNote(note), {
@@ -288,6 +349,7 @@ function createNoteForRelease(projectId, releaseId) {
 
   data.notes.push(note);
   selectedNoteId = note.id;
+  selectedScratchpad = false;
   renderNotesTree();
   selectNote(note.id);
   syncMutation(() => apiCreateNote(note), {
@@ -305,6 +367,159 @@ function renderNotePreview() {
   }
 }
 
+// --- Scratchpad functions ---
+
+function insertTimestamp() {
+  if (!scratchpadInput) return;
+  const now = new Date();
+  const timestamp = now.toLocaleString();
+  const start = scratchpadInput.selectionStart;
+  const end = scratchpadInput.selectionEnd;
+  const before = scratchpadInput.value.substring(0, start);
+  const after = scratchpadInput.value.substring(end);
+  scratchpadInput.value = before + `[${timestamp}]` + after;
+  scratchpadInput.selectionStart = scratchpadInput.selectionEnd = start + timestamp.length + 2;
+  updateScratchpad();
+  scratchpadInput.focus();
+}
+
+async function convertScratchpadToNote() {
+  const scratchpadContent = data.scratchpads[activeProjectType].content || "";
+  if (!scratchpadContent.trim()) {
+    showToast("Scratchpad is empty");
+    return;
+  }
+
+  // Build a list of projects for selection
+  const scopeProjects = data.projects.filter(p => p.type === activeProjectType);
+  if (scopeProjects.length === 0) {
+    showToast("No projects available for this type");
+    return;
+  }
+
+  const projectOptions = scopeProjects.map(p => ({
+    value: p.id,
+    label: p.name
+  }));
+
+  // Modal to select project, optional release, and title
+  const result = await openModal({
+    title: "Convert scratchpad to note",
+    bodyHtml: `
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        <div>
+          <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px; color: var(--text-secondary);">Project</label>
+          <select id="convertProjectSelect" style="width: 100%; padding: 6px 8px; border: 1px solid var(--border-light); border-radius: var(--radius-sm); font-family: var(--font); font-size: 13px; background: var(--bg-muted); color: var(--text-primary);">
+            ${projectOptions.map(opt => `<option value="${opt.value}">${escapeHtml(opt.label)}</option>`).join("")}
+          </select>
+        </div>
+        <div>
+          <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px; color: var(--text-secondary);">Release (optional)</label>
+          <select id="convertReleaseSelect" style="width: 100%; padding: 6px 8px; border: 1px solid var(--border-light); border-radius: var(--radius-sm); font-family: var(--font); font-size: 13px; background: var(--bg-muted); color: var(--text-primary);">
+            <option value="">-- None --</option>
+          </select>
+        </div>
+        <div>
+          <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px; color: var(--text-secondary);">Note title</label>
+          <input type="text" id="convertNoteTitle" placeholder="e.g., My captured note" style="width: 100%; padding: 6px 8px; border: 1px solid var(--border-light); border-radius: var(--radius-sm); font-family: var(--font); font-size: 13px; background: var(--bg-muted); color: var(--text-primary);">
+        </div>
+        <div style="display: flex; gap: 6px;">
+          <label style="display: flex; align-items: center; gap: 4px; font-size: 12px; color: var(--text-secondary);">
+            <input type="checkbox" id="convertKeepScratchpad" checked>
+            Keep scratchpad after conversion
+          </label>
+        </div>
+      </div>
+    `,
+    buttons: [
+      { label: "Cancel", value: "__cancel__", className: "modal-btn-cancel" },
+      {
+        label: "Convert",
+        className: "modal-btn-primary",
+        getValues: () => {
+          const projectSelect = document.getElementById("convertProjectSelect");
+          const releaseSelect = document.getElementById("convertReleaseSelect");
+          const titleInput = document.getElementById("convertNoteTitle");
+          const keepCheckbox = document.getElementById("convertKeepScratchpad");
+          return {
+            projectId: projectSelect.value,
+            releaseId: releaseSelect.value || null,
+            title: titleInput.value.trim() || "Untitled note",
+            keepScratchpad: keepCheckbox.checked
+          };
+        },
+        focused: true
+      }
+    ]
+  });
+
+  if (!result || result === "__cancel__" || result === null) return;
+
+  // Populate releases on project change (attach handler dynamically)
+  const projectSelect = document.getElementById("convertProjectSelect");
+  const releaseSelect = document.getElementById("convertReleaseSelect");
+  if (projectSelect && releaseSelect) {
+    const updateReleases = () => {
+      const projectId = projectSelect.value;
+      const project = data.projects.find(p => p.id === projectId);
+      releaseSelect.innerHTML = '<option value="">-- None --</option>';
+      if (project && project.releases) {
+        project.releases.forEach(rel => {
+          const opt = document.createElement("option");
+          opt.value = rel.id;
+          opt.textContent = rel.name;
+          releaseSelect.appendChild(opt);
+        });
+      }
+    };
+    projectSelect.addEventListener("change", updateReleases);
+    updateReleases();
+  }
+
+  // Create the note
+  const note = {
+    id: "note-" + generateId(),
+    projectId: result.projectId,
+    releaseId: result.releaseId,
+    title: result.title,
+    content: scratchpadContent,
+    createdAt: Date.now(),
+    updatedAt: Date.now()
+  };
+
+  data.notes.push(note);
+
+  // Clear or keep scratchpad based on checkbox
+  if (!result.keepScratchpad) {
+    data.scratchpads[activeProjectType].content = "";
+  }
+
+  // Save and select new note
+  selectedNoteId = note.id;
+  selectedScratchpad = false;
+  renderNotesTree();
+  selectNote(note.id);
+  syncMutation(() => apiCreateNote(note), {
+    errorMessage: "Failed to create note"
+  });
+  showToast("Note created from scratchpad");
+}
+
+async function clearScratchpad() {
+  const ok = await showConfirm("Clear scratchpad", "Are you sure? This will delete all unsaved content.");
+  if (!ok) return;
+  data.scratchpads[activeProjectType].content = "";
+  if (scratchpadInput) scratchpadInput.value = "";
+  updateScratchpad();
+}
+
+function updateScratchpad() {
+  if (!scratchpadInput) return;
+  data.scratchpads[activeProjectType].content = scratchpadInput.value || "";
+  data.scratchpads[activeProjectType].updatedAt = Date.now();
+  debouncedSaveScratchpad();
+}
+
 // --- Main render orchestrator ---
 
 function renderAll() {
@@ -319,6 +534,12 @@ function renderAll() {
 const debouncedSaveNote = debounce((noteId, patch) => {
   syncMutation(() => apiUpdateNote(noteId, patch), {
     errorMessage: "Failed to save note"
+  });
+}, 1000);
+
+const debouncedSaveScratchpad = debounce(() => {
+  syncMutation(() => apiUpdateScratchpad(activeProjectType, data.scratchpads[activeProjectType]), {
+    errorMessage: "Failed to save scratchpad"
   });
 }, 1000);
 
@@ -382,6 +603,23 @@ if (noteTitleInput) {
     renderNotesTree();
     debouncedSaveNote(note.id, { title: note.title, content: note.content });
   });
+}
+
+// Scratchpad input + auto-save
+if (scratchpadInput) {
+  scratchpadInput.addEventListener("input", updateScratchpad);
+}
+
+if (scratchpadTimestampBtn) {
+  scratchpadTimestampBtn.addEventListener("click", insertTimestamp);
+}
+
+if (scratchpadConvertBtn) {
+  scratchpadConvertBtn.addEventListener("click", convertScratchpadToNote);
+}
+
+if (scratchpadClearBtn) {
+  scratchpadClearBtn.addEventListener("click", clearScratchpad);
 }
 
 // --- Init (wait for common.js, then render) ---

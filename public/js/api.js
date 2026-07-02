@@ -78,3 +78,9 @@ function apiUpdateNote(id, patch) {
 function apiDeleteNote(id) {
   return apiRequest("DELETE", `/api/notes/${encodeURIComponent(id)}`);
 }
+
+// --- Scratchpads ---
+
+function apiUpdateScratchpad(type, scratchpad) {
+  return apiRequest("PATCH", `/api/scratchpads/${encodeURIComponent(type)}`, scratchpad);
+}
