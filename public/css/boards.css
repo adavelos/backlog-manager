@@ -192,11 +192,6 @@
   align-items: center;
   justify-content: center;
   transition: all 0.12s ease;
-  opacity: 0;
-}
-
-.column:hover .column-add-btn {
-  opacity: 1;
 }
 
 .column-add-btn:hover {
@@ -582,10 +577,9 @@
 
 /* --- Item form (inside modal) ----------------------------------- */
 .item-form {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 2px 0;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 16px !important;
 }
 
 .if-project {
@@ -599,18 +593,19 @@
 }
 
 .if-input {
-  display: block;
-  width: 100%;
-  padding: 10px 12px;
-  font-size: 14px;
-  font-family: var(--font);
-  font-weight: 500;
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-md);
-  outline: none;
-  background: var(--bg-muted);
-  color: var(--text-primary);
-  transition: border-color 0.15s, box-shadow 0.15s;
+  display: block !important;
+  width: 100% !important;
+  padding: 10px 12px !important;
+  font-size: 13px !important;
+  font-family: var(--font) !important;
+  line-height: 1.5 !important;
+  min-height: 36px !important;
+  border: 1px solid var(--border-light) !important;
+  border-radius: var(--radius-md) !important;
+  outline: none !important;
+  background: var(--bg-muted) !important;
+  color: var(--text-primary) !important;
+  transition: border-color 0.15s, box-shadow 0.15s, background-color 0.15s !important;
 }
 
 .if-input:focus {
@@ -633,13 +628,20 @@
   flex: 1;
 }
 
+.if-field {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+  margin-bottom: 4px !important;
+}
+
 .if-label {
-  font-size: 10px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: var(--text-muted);
-  margin-bottom: 5px;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+  color: var(--text-muted) !important;
+  margin-bottom: 4px !important;
 }
 
 .if-opts {
@@ -651,10 +653,10 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 5px 10px;
+  padding: 6px 12px;
   border-radius: var(--radius-full);
   border: 1px solid var(--border-light);
-  background: var(--bg-surface);
+  background: var(--bg-muted);
   cursor: pointer;
   font-size: 11px;
   font-weight: 600;
@@ -663,6 +665,7 @@
   user-select: none;
   flex: 1;
   text-align: center;
+  min-height: 28px;
 }
 
 .fp-opt input { display: none }
@@ -722,11 +725,12 @@
 }
 
 .if-textarea {
-  resize: vertical;
-  min-height: 50px;
-  font-family: var(--font);
-  font-size: 13px;
-  line-height: 1.5;
+  resize: vertical !important;
+  min-height: 80px !important;
+  font-family: var(--font) !important;
+  font-size: 13px !important;
+  line-height: 1.5 !important;
+  padding: 10px 12px !important;
 }
 
 .if-details {
@@ -795,10 +799,7 @@
 .item-detail-form {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 2px 0;
-  max-height: 60vh;
-  overflow-y: auto;
+  gap: 14px;
 }
 
 .item-detail-form .if-field {
@@ -822,6 +823,8 @@
   font-weight: 500;
   color: var(--text-muted);
   font-family: monospace;
+  margin-bottom: 4px;
+  padding: 4px 0;
 }
 
 /* --- Subitems (within detail modal) ------------------------------ */
