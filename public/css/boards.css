@@ -690,9 +690,9 @@
 }
 
 .fp-opt.opt-low:has(input:checked) {
-  border-color: var(--slate-300);
-  background: var(--slate-100);
-  color: var(--slate-600);
+  border-color: var(--emerald-400);
+  background: var(--emerald-50);
+  color: var(--emerald-700);
 }
 
 .fp-opt.opt-bug:has(input:checked) {

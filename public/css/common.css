@@ -321,9 +321,9 @@ body {
 }
 
 .badge.priority-LOW {
-  background: var(--slate-100);
-  color: var(--slate-600);
-  border-color: var(--slate-200);
+  background: var(--emerald-50);
+  color: var(--emerald-600);
+  border-color: var(--emerald-100);
 }
 
 .badge.priority-MEDIUM {
