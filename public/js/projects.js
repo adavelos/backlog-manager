@@ -317,17 +317,17 @@ async function openProjectDetail(projectId) {
 
       <div class="if-field">
         <div class="if-label">Name</div>
-        <input class="if-input" id="pdName" type="text" value="${(project.name || "").replace(/"/g, "&quot;")}">
+        <input class="if-input" id="pdName" type="text" value="${escapeHtml(project.name || "")}">
       </div>
 
       <div class="if-field">
         <div class="if-label">Description</div>
-        <textarea class="if-input if-textarea" id="pdDesc" rows="3">${(project.description || "").replace(/"/g, "&quot;")}</textarea>
+        <textarea class="if-input if-textarea" id="pdDesc" rows="3">${escapeHtml(project.description || "")}</textarea>
       </div>
 
       <div class="if-field">
         <div class="if-label">Repo path</div>
-        <input class="if-input" id="pdRepoPath" type="text" value="${(project.repoPath || "").replace(/"/g, "&quot;")}" placeholder="e.g. my-org/my-repo">
+        <input class="if-input" id="pdRepoPath" type="text" value="${escapeHtml(project.repoPath || "")}" placeholder="e.g. my-org/my-repo">
       </div>
     </div>`;
 
@@ -453,7 +453,7 @@ async function openReleaseDetail(projectId, releaseId) {
       <div class="if-row" style="gap:8px">
         <div class="if-field" style="flex:1">
           <div class="if-label">Name</div>
-          <input class="if-input" id="rdName" type="text" value="${(release.name || "").replace(/"/g, "&quot;")}">
+          <input class="if-input" id="rdName" type="text" value="${escapeHtml(release.name || "")}">
         </div>
         <div class="if-field" style="flex:0.6">
           <div class="if-label">State</div>
@@ -463,7 +463,7 @@ async function openReleaseDetail(projectId, releaseId) {
 
       <div class="if-field">
         <div class="if-label">Description</div>
-        <textarea class="if-input if-textarea" id="rdDesc" rows="3">${(release.description || "").replace(/"/g, "&quot;")}</textarea>
+        <textarea class="if-input if-textarea" id="rdDesc" rows="3">${escapeHtml(release.description || "")}</textarea>
       </div>
     </div>`;
 

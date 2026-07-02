@@ -719,7 +719,7 @@ async function openItemDetail(itemId) {
   const subitemsHtml = (item.subitems || []).map((si, idx) =>
     `<div class="subitem-row${si.done ? " done" : ""}">
       <input type="checkbox" class="si-check" data-idx="${idx}"${si.done ? " checked" : ""}>
-      <span class="subitem-title">${si.title}</span>
+      <span class="subitem-title">${escapeHtml(si.title)}</span>
       <button class="manage-item-action danger si-del" data-idx="${idx}" style="opacity:0.3">&times;</button>
     </div>`
   ).join("");
@@ -745,7 +745,7 @@ async function openItemDetail(itemId) {
 
       <div class="if-field">
         <div class="if-label">Title</div>
-        <input class="if-input" id="idTitle" type="text" value="${item.title.replace(/"/g, "&quot;")}">
+        <input class="if-input" id="idTitle" type="text" value="${escapeHtml(item.title)}">
       </div>
 
       <div class="if-row">
@@ -762,29 +762,29 @@ async function openItemDetail(itemId) {
       <div class="if-field">
         <div class="if-label">Tags (comma-separated)</div>
         <div class="tag-input-wrapper">
-          <input class="if-input" id="idTags" type="text" value="${tagsVal.replace(/"/g, "&quot;")}" autocomplete="off">
+          <input class="if-input" id="idTags" type="text" value="${escapeHtml(tagsVal)}" autocomplete="off">
           <div class="tag-suggestions" id="idTagSuggestions"></div>
         </div>
       </div>
 
       <div class="if-field">
         <div class="if-label">Analysis</div>
-        <textarea class="if-input if-textarea" id="idAnalysis" rows="3">${(item.analysis || "").replace(/"/g, "&quot;")}</textarea>
+        <textarea class="if-input if-textarea" id="idAnalysis" rows="3">${escapeHtml(item.analysis || "")}</textarea>
       </div>
 
       <div class="if-field">
         <div class="if-label">Prompt</div>
-        <textarea class="if-input if-textarea" id="idPrompt" rows="3">${(item.prompt || "").replace(/"/g, "&quot;")}</textarea>
+        <textarea class="if-input if-textarea" id="idPrompt" rows="3">${escapeHtml(item.prompt || "")}</textarea>
       </div>
 
       <div class="if-field">
         <div class="if-label">Report</div>
-        <textarea class="if-input if-textarea" id="idReport" rows="3">${(item.report || "").replace(/"/g, "&quot;")}</textarea>
+        <textarea class="if-input if-textarea" id="idReport" rows="3">${escapeHtml(item.report || "")}</textarea>
       </div>
 
       <div class="if-field">
         <div class="if-label">Files affected (comma-separated)</div>
-        <input class="if-input" id="idFiles" type="text" value="${filesVal.replace(/"/g, "&quot;")}">
+        <input class="if-input" id="idFiles" type="text" value="${escapeHtml(filesVal)}">
       </div>
 
       <div class="if-field">
@@ -838,7 +838,7 @@ async function openItemDetail(itemId) {
           div.className = "subitem-row";
           div.innerHTML = `
             <input type="checkbox" class="si-check">
-            <span class="subitem-title">${title.replace(/"/g, "&quot;")}</span>
+            <span class="subitem-title">${escapeHtml(title)}</span>
             <button class="manage-item-action danger si-del" style="opacity:0.3">&times;</button>
           `;
           div.querySelector(".si-check").addEventListener("change", () => {
