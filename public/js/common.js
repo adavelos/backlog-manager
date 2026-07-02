@@ -87,6 +87,7 @@ async function saveDataToServer() {
       return;
     }
     lastSyncAt = new Date();
+    sessionStorage.setItem("lastSyncAt", lastSyncAt.toISOString());
     renderStatusBar();
   } catch (e) {
     console.error("Error saving backlog", e);
@@ -460,6 +461,13 @@ if (syncNowBtn) {
 (async function init() {
   await loadConfig();
   await loadDataFromServer();
+  // Restore lastSyncAt across page navigations (survives full page reloads within the tab)
+  try {
+    const stored = sessionStorage.getItem("lastSyncAt");
+    if (stored) {
+      lastSyncAt = new Date(stored);
+    }
+  } catch (_) { /* sessionStorage may be unavailable */ }
   renderStatusBar();
   renderHeaderTypeToggle();
   setInterval(saveDataToServer, 60_000); // periodic sync
