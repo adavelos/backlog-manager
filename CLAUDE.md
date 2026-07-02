@@ -210,3 +210,18 @@ If a server crash leaves corrupt JSON:
 - No linting config (watch for consistent spacing/naming)
 - `marked.js` is vendored; check for security updates periodically
 - If you add more endpoints, keep the data model simple (projects + items + notes arrays)
+
+## Database Schema Changes
+
+**Always backup before modifying the schema:**
+```bash
+./backup.sh    # Creates timestamped backup, keeps last 7
+```
+
+When changing `db/init.sql`:
+1. Run `./backup.sh` to create a safe backup
+2. Add migration logic to `server.js:migrateDB()` to handle existing databases
+3. Test with an existing database to ensure the migration doesn't fail
+4. Document the change in the commit message
+
+This ensures data safety if a migration needs to be rolled back.
