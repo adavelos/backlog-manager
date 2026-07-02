@@ -6,9 +6,29 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // --- Configurable data directory ---
+// Defaults to a fixed location outside the repo so the data file is the same
+// regardless of how/where the server is started (npm start, start.sh, IDE run
+// button, etc). Override with BACKLOG_DATA_DIR if you need a different path.
 const DATA_DIR = process.env.BACKLOG_DATA_DIR
-  || path.join(__dirname, 'data');
+  || path.join(require('os').homedir(), '.backlog', 'data');
 const DATA_FILE = path.join(DATA_DIR, 'backlog.json');
+
+// --- Logging helper ---
+const LOG_FILE = '/tmp/backlog-manager.log';
+
+function writeLog(level, message) {
+  const line = `[${new Date().toISOString()}] [${level}] ${message}`;
+  (level === 'ERROR' ? console.error : console.log)(line);
+  fs.appendFile(LOG_FILE, line + '\n', (err) => {
+    if (err) console.error(`Failed to write to log file: ${err.message}`);
+  });
+}
+
+const log = {
+  info: (msg) => writeLog('INFO', msg),
+  warn: (msg) => writeLog('WARN', msg),
+  error: (msg) => writeLog('ERROR', msg),
+};
 
 // --- Middleware ---
 app.use(express.json());
@@ -34,7 +54,7 @@ function readBacklog() {
       return JSON.parse(raw);
     }
   } catch (err) {
-    console.error('Error reading backlog data:', err.message);
+    log.error('Error reading backlog data: ' + err.stack);
     // Return null to signal read failure; caller will detect and reject with 5xx
     return null;
   }
@@ -48,7 +68,8 @@ function writeBacklog(data) {
     }
     // Write to a temporary file first, then atomically rename it.
     const tempFile = DATA_FILE + '.tmp';
-    fs.writeFileSync(tempFile, JSON.stringify(data, null, 2), 'utf-8');
+    const jsonStr = JSON.stringify(data, null, 2);
+    fs.writeFileSync(tempFile, jsonStr, 'utf-8');
 
     // Before renaming, create a backup of the current file (if it exists).
     if (fs.existsSync(DATA_FILE)) {
@@ -58,9 +79,10 @@ function writeBacklog(data) {
 
     // Atomically replace the old file with the new one.
     fs.renameSync(tempFile, DATA_FILE);
+    log.info(`Backlog write succeeded (${jsonStr.length} bytes)`);
     return true;
   } catch (err) {
-    console.error('Error writing backlog data:', err.message);
+    log.error('Error writing backlog data: ' + err.stack);
     return false;
   }
 }
@@ -93,6 +115,7 @@ app.post('/api/backlog', (req, res) => {
 
   // Basic validation: must be an object with projects and items arrays
   if (!data || typeof data !== 'object' || !Array.isArray(data.projects) || !Array.isArray(data.items)) {
+    log.warn('Rejected invalid backlog payload');
     return res.status(400).json({ status: 'error', message: 'Invalid payload: expected { projects: [], items: [] }' });
   }
 
@@ -106,7 +129,11 @@ app.post('/api/backlog', (req, res) => {
 
 // --- Start server ---
 app.listen(PORT, () => {
-  console.log(`Backlog Manager running at http://localhost:${PORT}/index.html`);
-  console.log(`Data directory: ${DATA_DIR}`);
-  console.log(`Data file: ${DATA_FILE}`);
+  log.info(`Backlog Manager running at http://localhost:${PORT}/index.html`);
+  log.info(`Data directory: ${DATA_DIR}`);
+  log.info(`Data file: ${DATA_FILE}`);
 });
+
+// --- Catch process-level crashes ---
+process.on('uncaughtException', (err) => log.error('Uncaught exception: ' + err.stack));
+process.on('unhandledRejection', (reason) => log.error('Unhandled rejection: ' + reason));

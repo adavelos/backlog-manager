@@ -1,10 +1,9 @@
 #!/bin/bash
 
-# Export env var so Node/Express can read it
-export BACKLOG_DATA_DIR=/home/adavelos/.backlog/data
+# BACKLOG_DATA_DIR is optional now — server.js defaults to ~/.backlog/data
+# on its own. Only set this if you want to point at a different location.
 
 echo "Starting Backlog Manager..."
-echo "  DATA_DIR = $BACKLOG_DATA_DIR"
 echo "  using server.js via npm"
 
 # Install dependencies if node_modules is missing
@@ -19,3 +18,4 @@ npm start &
 # Save the PID so it can be stopped later
 echo $! > /tmp/backlog-manager.pid
 echo "Backlog Manager started in background (PID: $(cat /tmp/backlog-manager.pid))"
+echo "Logs: /tmp/backlog-manager.log"
