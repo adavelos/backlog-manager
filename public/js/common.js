@@ -75,7 +75,23 @@ async function loadDataFromServer() {
   }
 }
 
+let autoSaveTimer = null;
+
+// Coalesces rapid-fire changes (e.g. typing) into a single save ~1s after
+// the last change, instead of writing the whole backlog file per keystroke.
+function scheduleAutoSave(delayMs = 1000) {
+  if (autoSaveTimer) clearTimeout(autoSaveTimer);
+  autoSaveTimer = setTimeout(() => {
+    autoSaveTimer = null;
+    saveDataToServer();
+  }, delayMs);
+}
+
 async function saveDataToServer() {
+  if (autoSaveTimer) {
+    clearTimeout(autoSaveTimer);
+    autoSaveTimer = null;
+  }
   try {
     const resp = await fetch("/api/backlog", {
       method: "POST",
@@ -113,19 +129,21 @@ function escapeHtml(text) {
 }
 
 function buildItemPrompt(item) {
-  const filesLines = (item.filesAffected && item.filesAffected.length > 0)
-    ? item.filesAffected.map(f => `- ${f}`).join("\n")
-    : "(none)";
-  return `# ${item.title}
+  let result = `# ${item.title}`;
 
-## Analysis
-${item.analysis && item.analysis.trim() ? item.analysis : "(none)"}
+  if (item.analysis && item.analysis.trim()) {
+    result += `\n\n## Analysis\n${item.analysis}`;
+  }
 
-## Files Affected
-${filesLines}
+  if (item.filesAffected && item.filesAffected.length > 0) {
+    result += `\n\n## Files Affected\n${item.filesAffected.map(f => `- ${f}`).join("\n")}`;
+  }
 
-## Prompt
-${item.prompt && item.prompt.trim() ? item.prompt : "(none)"}`;
+  if (item.prompt && item.prompt.trim()) {
+    result += `\n\n## Prompt\n${item.prompt}`;
+  }
+
+  return result;
 }
 
 let _toastEl = null;
@@ -360,6 +378,14 @@ function openModal({ title, message, showInput, inputPlaceholder, inputValue, bu
         document.removeEventListener("keydown", keyHandler);
         keyHandler = null;
       }
+      modalOverlay.removeEventListener("click", overlayClickHandler);
+    };
+    const overlayClickHandler = (e) => {
+      if (e.target === modalOverlay) {
+        cleanup();
+        closeModal();
+        resolve(null);
+      }
     };
     buttons.forEach((btn) => {
       const el = document.createElement("button");
@@ -383,6 +409,7 @@ function openModal({ title, message, showInput, inputPlaceholder, inputValue, bu
     });
     modalOverlay.classList.remove("hidden");
     setupMaximizeButton(modalDialog);
+    modalOverlay.addEventListener("click", overlayClickHandler);
     keyHandler = e => {
       if (e.key === "Escape") {
         cleanup();
@@ -455,6 +482,16 @@ if (syncNowBtn) {
     saveDataToServer();
   });
 }
+
+// Flush a pending debounced auto-save if the tab closes before it fires.
+window.addEventListener("beforeunload", () => {
+  if (!autoSaveTimer) return;
+  clearTimeout(autoSaveTimer);
+  autoSaveTimer = null;
+  try {
+    navigator.sendBeacon("/api/backlog", new Blob([JSON.stringify(data)], { type: "application/json" }));
+  } catch (_) { /* sendBeacon unsupported; best-effort only */ }
+});
 
 // --- Init (auto-load) ---
 

@@ -436,6 +436,10 @@ function renderQuickEdit(items) {
         tr.appendChild(tdTags);
 
         tr.addEventListener("dragstart", (ev) => {
+          if (ev.target.tagName === "INPUT" || ev.target.classList.contains("qe-cell-input")) {
+            ev.preventDefault();
+            return;
+          }
           tr.classList.add("qe-row-dragging");
           ev.dataTransfer.effectAllowed = "move";
           ev.dataTransfer.setData("text/plain", item.id);
@@ -534,12 +538,40 @@ function qeStartEditCell(td) {
   input.type = "text";
   input.className = "qe-cell-input";
   input.value = item.title || "";
+  input.autocomplete = "off";
+  input.spellcheck = "true";
+  input.style.userSelect = "text";
+  input.style.WebkitUserSelect = "text";
   td.textContent = "";
   td.appendChild(input);
   qeEditingCell = td;
 
+  const row = td.closest("tr");
+  const wasRowDraggable = row ? row.draggable : false;
+  if (row) {
+    row.draggable = false;
+  }
+
   input.focus();
   input.select();
+
+  let hasClicked = false;
+  input.addEventListener("click", (ev) => {
+    ev.stopPropagation();
+    if (!hasClicked) {
+      hasClicked = true;
+      input.setSelectionRange(input.selectionStart, input.selectionStart);
+    }
+  });
+
+  input.addEventListener("mousedown", (ev) => {
+    ev.stopPropagation();
+  });
+
+  input.addEventListener("dragstart", (ev) => {
+    ev.preventDefault();
+    ev.stopPropagation();
+  });
 
   input.addEventListener("keydown", (ev) => {
     if (ev.key === "Enter") {
@@ -567,6 +599,11 @@ function qeCommitEditCell(td, value) {
   const item = data.items.find(i => i.id === itemId);
   if (!item) return;
 
+  const row = td.closest("tr");
+  if (row) {
+    row.draggable = true;
+  }
+
   item.title = value;
   td.textContent = value;
   td.title = value;
@@ -580,6 +617,12 @@ function qeCancelEditCell() {
   const itemId = td.dataset.itemId;
   const item = itemId ? data.items.find(i => i.id === itemId) : null;
   const value = item ? item.title : "";
+
+  const row = td.closest("tr");
+  if (row) {
+    row.draggable = true;
+  }
+
   td.textContent = value || "";
   td.title = value || "";
   qeEditingCell = null;
@@ -943,8 +986,10 @@ async function addItem(targetState) {
     `<option value="${p.id}"${p.id === chosenProjectId ? " selected" : ""}>${p.name}</option>`
   ).join("");
 
+  const activeRelease = releases.find(r => r.state === "ACTIVE");
+  const activeReleaseId = activeRelease ? activeRelease.id : null;
   const releaseOpts = `<option value="">(no release)</option>`
-    + releases.map(r => `<option value="${r.id}">${r.name}</option>`).join("");
+    + releases.map(r => `<option value="${r.id}"${r.id === activeReleaseId ? " selected" : ""}>${r.name}</option>`).join("");
 
   const priorityRadios = [
     { v: "LOW", l: "Low", c: "opt-low" },
@@ -1018,8 +1063,9 @@ async function addItem(targetState) {
           const pid = projSelect.value;
           const p = data.projects.find(pr => pr.id === pid);
           const rels = p ? p.releases || [] : [];
+          const activeRel = rels.find(r => r.state === "ACTIVE");
           relSelect.innerHTML = `<option value="">(no release)</option>`
-            + rels.map(r => `<option value="${r.id}">${r.name}</option>`).join("");
+            + rels.map(r => `<option value="${r.id}"${r.id === (activeRel && activeRel.id) ? " selected" : ""}>${r.name}</option>`).join("");
         };
         projSelect.addEventListener("change", updateReleases);
       }
