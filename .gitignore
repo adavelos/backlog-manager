@@ -15,3 +15,11 @@ Thumbs.db
 
 # Claude Code local state
 .claude/scheduled_tasks.lock
+
+# Local backlog data (server now defaults to ~/.backlog/data)
+data/
+
+# SQLite database files
+*.db
+*.db-wal
+*.db-shm

@@ -8,6 +8,17 @@ let quickEditMode = false;
 let qeEditingCell = null;
 let showArchivePanel = false;
 
+// Fractional indexing: pick a sortOrder between two neighbors without
+// touching their rows, so a drag-reorder is a single scoped item update.
+function computeSortOrder(prevItem, nextItem) {
+  const prev = prevItem ? prevItem.sortOrder : null;
+  const next = nextItem ? nextItem.sortOrder : null;
+  if (prev == null && next == null) return 0;
+  if (prev == null) return next - 1;
+  if (next == null) return prev + 1;
+  return (prev + next) / 2;
+}
+
 // DOM refs
 const filtersPanelEl = document.getElementById("filtersPanel");
 const projectChipsEl = document.getElementById("projectChips");
@@ -199,15 +210,19 @@ function renderStateBoard(items) {
 
       const targetState = state;
       if (draggedItem.state !== targetState) {
+        const prevState = draggedItem.state;
         draggedItem.state = targetState;
         draggedItem.updatedAt = Date.now();
         if (targetState === "DONE") {
           draggedItem.completedAt = Date.now();
-        } else if (draggedItem.state !== "DONE") {
+        } else if (prevState === "DONE") {
           draggedItem.completedAt = null;
         }
-        saveDataToServer();
         renderAll();
+        syncMutation(() => apiUpdateItem(draggedItem.id, { state: targetState }), {
+          onSuccess: (updated) => { draggedItem.completedAt = updated.completedAt; },
+          errorMessage: "Failed to move item"
+        });
       }
     });
 
@@ -282,8 +297,10 @@ function renderReleaseBoard(items) {
       if (draggedItem.releaseId !== targetReleaseId) {
         draggedItem.releaseId = targetReleaseId;
         draggedItem.updatedAt = Date.now();
-        saveDataToServer();
         renderAll();
+        syncMutation(() => apiUpdateItem(draggedItem.id, { releaseId: targetReleaseId }), {
+          errorMessage: "Failed to move item"
+        });
       }
     });
 
@@ -494,8 +511,19 @@ function renderQuickEdit(items) {
         const [moved] = data.items.splice(fromActual, 1);
         const adjustedTo = data.items.indexOf(targetItem);
         data.items.splice(adjustedTo, 0, moved);
+
+        const movedIdx = data.items.indexOf(moved);
+        const prevNeighbor = data.items[movedIdx - 1] || null;
+        const nextNeighbor = data.items[movedIdx + 1] || null;
+        moved.sortOrder = computeSortOrder(prevNeighbor, nextNeighbor);
+
+        renderAll();
+        syncMutation(() => apiUpdateItem(moved.id, { sortOrder: moved.sortOrder }), {
+          errorMessage: "Failed to reorder item"
+        });
       } else {
         const now = Date.now();
+        const patch = {};
         if (view === "state") {
           const prevState = draggedItem.state;
           draggedItem.state = targetGroupId;
@@ -505,13 +533,18 @@ function renderQuickEdit(items) {
           } else if (prevState === "DONE") {
             draggedItem.completedAt = null;
           }
+          patch.state = targetGroupId;
         } else {
           draggedItem.releaseId = targetGroupId === "NO_RELEASE" ? null : targetGroupId;
           draggedItem.updatedAt = now;
+          patch.releaseId = draggedItem.releaseId;
         }
+        renderAll();
+        syncMutation(() => apiUpdateItem(draggedItem.id, patch), {
+          onSuccess: (updated) => { draggedItem.completedAt = updated.completedAt; },
+          errorMessage: "Failed to move item"
+        });
       }
-      saveDataToServer();
-      renderAll();
     });
 
     table.appendChild(tbody);
@@ -604,11 +637,16 @@ function qeCommitEditCell(td, value) {
     row.draggable = true;
   }
 
+  const changed = item.title !== value;
   item.title = value;
   td.textContent = value;
   td.title = value;
   qeEditingCell = null;
-  saveDataToServer();
+  if (changed) {
+    syncMutation(() => apiUpdateItem(item.id, { title: value }), {
+      errorMessage: "Failed to save title"
+    });
+  }
 }
 
 function qeCancelEditCell() {
@@ -949,8 +987,23 @@ async function openItemDetail(itemId) {
     item.subitems = subitems;
     item.updatedAt = Date.now();
 
-    saveDataToServer();
     renderAll();
+    syncMutation(() => apiUpdateItem(item.id, {
+      title: item.title,
+      state: item.state,
+      releaseId: item.releaseId,
+      priority: item.priority,
+      type: item.type,
+      tags: item.tags,
+      analysis: item.analysis,
+      prompt: item.prompt,
+      report: item.report,
+      filesAffected: item.filesAffected,
+      subitems: item.subitems
+    }), {
+      onSuccess: (updated) => { item.completedAt = updated.completedAt; },
+      errorMessage: "Failed to save item"
+    });
     return;
   }
 
@@ -958,8 +1011,10 @@ async function openItemDetail(itemId) {
     const ok = await showConfirm("Delete item", `Delete "${item.title}"? This cannot be undone.`);
     if (!ok) return;
     data.items = data.items.filter(i => i.id !== itemId);
-    saveDataToServer();
     renderAll();
+    syncMutation(() => apiDeleteItem(itemId), {
+      errorMessage: "Failed to delete item"
+    });
   }
 }
 
@@ -1126,8 +1181,11 @@ async function addItem(targetState) {
   };
 
   data.items.push(item);
-  saveDataToServer();
   renderAll();
+  syncMutation(() => apiCreateItem(item), {
+    onSuccess: (created) => { item.sortOrder = created.sortOrder; },
+    errorMessage: "Failed to create item"
+  });
 }
 
 // --- Archive panel ---

@@ -202,8 +202,10 @@ function createNoteLeafButton(note) {
       showNotesEmptyState();
     }
     data.notes = data.notes.filter(n => n.id !== note.id);
-    saveDataToServer();
     renderNotesTree();
+    syncMutation(() => apiDeleteNote(note.id), {
+      errorMessage: "Failed to delete note"
+    });
   });
   row.appendChild(delBtn);
 
@@ -266,9 +268,11 @@ function createNoteForProject(projectId) {
 
   data.notes.push(note);
   selectedNoteId = note.id;
-  saveDataToServer();
   renderNotesTree();
   selectNote(note.id);
+  syncMutation(() => apiCreateNote(note), {
+    errorMessage: "Failed to create note"
+  });
 }
 
 function createNoteForRelease(projectId, releaseId) {
@@ -284,9 +288,11 @@ function createNoteForRelease(projectId, releaseId) {
 
   data.notes.push(note);
   selectedNoteId = note.id;
-  saveDataToServer();
   renderNotesTree();
   selectNote(note.id);
+  syncMutation(() => apiCreateNote(note), {
+    errorMessage: "Failed to create note"
+  });
 }
 
 function renderNotePreview() {
@@ -309,6 +315,13 @@ function renderAll() {
 
 // --- Event wiring (editor) ---
 
+// Debounces rapid typing into a single scoped PATCH per note.
+const debouncedSaveNote = debounce((noteId, patch) => {
+  syncMutation(() => apiUpdateNote(noteId, patch), {
+    errorMessage: "Failed to save note"
+  });
+}, 1000);
+
 if (saveNoteBtn) {
   saveNoteBtn.addEventListener("click", () => {
     if (!selectedNoteId) return;
@@ -318,7 +331,9 @@ if (saveNoteBtn) {
     note.content = noteContentInput ? (noteContentInput.value || "") : "";
     note.updatedAt = Date.now();
     renderNotesTree();
-    saveDataToServer();
+    syncMutation(() => apiUpdateNote(note.id, { title: note.title, content: note.content }), {
+      errorMessage: "Failed to save note"
+    });
   });
 }
 
@@ -329,6 +344,7 @@ if (deleteNoteBtn) {
     if (!note) return;
     const ok = await showConfirm("Delete note", `Delete "${note.title}"? This cannot be undone.`);
     if (!ok) return;
+    const noteId = selectedNoteId;
     data.notes = data.notes.filter(n => n.id !== selectedNoteId);
     selectedNoteId = null;
     if (noteTitleInput) noteTitleInput.value = "";
@@ -337,13 +353,35 @@ if (deleteNoteBtn) {
     if (noteContextLabel) noteContextLabel.textContent = "";
     showNotesEmptyState();
     renderNotesTree();
-    saveDataToServer();
+    syncMutation(() => apiDeleteNote(noteId), {
+      errorMessage: "Failed to delete note"
+    });
   });
 }
 
-// Live Markdown preview as user types
+// Live Markdown preview + auto-save as user types
 if (noteContentInput) {
-  noteContentInput.addEventListener("input", renderNotePreview);
+  noteContentInput.addEventListener("input", () => {
+    renderNotePreview();
+    if (!selectedNoteId) return;
+    const note = data.notes.find(n => n.id === selectedNoteId);
+    if (!note) return;
+    note.content = noteContentInput.value || "";
+    note.updatedAt = Date.now();
+    debouncedSaveNote(note.id, { title: note.title, content: note.content });
+  });
+}
+
+if (noteTitleInput) {
+  noteTitleInput.addEventListener("input", () => {
+    if (!selectedNoteId) return;
+    const note = data.notes.find(n => n.id === selectedNoteId);
+    if (!note) return;
+    note.title = noteTitleInput.value || "Untitled note";
+    note.updatedAt = Date.now();
+    renderNotesTree();
+    debouncedSaveNote(note.id, { title: note.title, content: note.content });
+  });
 }
 
 // --- Init (wait for common.js, then render) ---

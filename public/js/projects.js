@@ -303,8 +303,10 @@ async function addProject() {
 
   data.projects.push(project);
   selectedProjectId = project.id;
-  saveDataToServer();
   renderAll();
+  syncMutation(() => apiCreateProject(project), {
+    errorMessage: "Failed to create project"
+  });
 }
 
 async function openProjectDetail(projectId) {
@@ -352,8 +354,14 @@ async function openProjectDetail(projectId) {
     project.description = descEl ? descEl.value.trim() : project.description;
     project.repoPath = repoEl ? repoEl.value.trim() : project.repoPath;
 
-    saveDataToServer();
     renderAll();
+    syncMutation(() => apiUpdateProject(project.id, {
+      name: project.name,
+      description: project.description,
+      repoPath: project.repoPath
+    }), {
+      errorMessage: "Failed to save project"
+    });
     return;
   }
 
@@ -379,8 +387,10 @@ async function deleteProject(projectId) {
     currentProjectId = "ALL";
   }
 
-  saveDataToServer();
   renderAll();
+  syncMutation(() => apiDeleteProject(projectId), {
+    errorMessage: "Failed to delete project"
+  });
 }
 
 // --- Release CRUD ---
@@ -433,8 +443,10 @@ async function addRelease() {
   if (!project.releases) project.releases = [];
   project.releases.push(release);
 
-  saveDataToServer();
   renderAll();
+  syncMutation(() => apiCreateRelease(project.id, release), {
+    errorMessage: "Failed to create release"
+  });
 }
 
 async function openReleaseDetail(projectId, releaseId) {
@@ -488,8 +500,14 @@ async function openReleaseDetail(projectId, releaseId) {
     release.state = stateEl ? stateEl.value : release.state;
     release.description = descEl ? descEl.value.trim() : release.description;
 
-    saveDataToServer();
     renderAll();
+    syncMutation(() => apiUpdateRelease(release.id, {
+      name: release.name,
+      state: release.state,
+      description: release.description
+    }), {
+      errorMessage: "Failed to save release"
+    });
     return;
   }
 
@@ -515,8 +533,10 @@ async function deleteRelease(projectId, releaseId) {
   });
   data.notes = data.notes.filter(note => !(note.projectId === projectId && note.releaseId === releaseId));
 
-  saveDataToServer();
   renderAll();
+  syncMutation(() => apiDeleteRelease(releaseId), {
+    errorMessage: "Failed to delete release"
+  });
 }
 
 // --- Main render orchestrator ---

@@ -5,7 +5,6 @@
 // --- Global state ---
 let data = { projects: [], items: [], notes: [] };
 let config = { dataDir: "", dataFile: "" };
-let lastSyncAt = null;
 let activeProjectType = "work";  // "work" | "argonath"
 let currentProjectId = "ALL";
 let activeTags = new Set();
@@ -16,8 +15,6 @@ let modalResolve = null;
 
 // DOM refs (status bar)
 const statusDataFileEl = document.getElementById("statusDataFile");
-const statusLastSyncEl = document.getElementById("statusLastSync");
-const syncNowBtn = document.getElementById("syncNowBtn");
 
 // DOM refs (header type toggle)
 const headerTypeToggle = document.getElementById("headerTypeToggle");
@@ -75,39 +72,35 @@ async function loadDataFromServer() {
   }
 }
 
-let autoSaveTimer = null;
-
-// Coalesces rapid-fire changes (e.g. typing) into a single save ~1s after
-// the last change, instead of writing the whole backlog file per keystroke.
-function scheduleAutoSave(delayMs = 1000) {
-  if (autoSaveTimer) clearTimeout(autoSaveTimer);
-  autoSaveTimer = setTimeout(() => {
-    autoSaveTimer = null;
-    saveDataToServer();
-  }, delayMs);
+// Wraps a scoped api.js call (apiUpdateItem, apiCreateNote, etc). Callers
+// apply their optimistic local mutation + renderAll() *before* invoking this;
+// on failure we pull the authoritative state back from the server so a
+// dropped request can't leave the local copy silently diverged from disk.
+async function syncMutation(promiseFn, { onSuccess, errorMessage } = {}) {
+  try {
+    const result = await promiseFn();
+    if (onSuccess) onSuccess(result);
+    return result;
+  } catch (e) {
+    console.error(errorMessage || "Save failed", e);
+    showToast(errorMessage || "Save failed — reloading latest data");
+    await loadDataFromServer();
+    if (typeof window.renderAll === "function") window.renderAll();
+    throw e;
+  }
 }
 
-async function saveDataToServer() {
-  if (autoSaveTimer) {
-    clearTimeout(autoSaveTimer);
-    autoSaveTimer = null;
-  }
-  try {
-    const resp = await fetch("/api/backlog", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data)
-    });
-    if (!resp.ok) {
-      console.error("Failed to save backlog", resp.status);
-      return;
-    }
-    lastSyncAt = new Date();
-    sessionStorage.setItem("lastSyncAt", lastSyncAt.toISOString());
-    renderStatusBar();
-  } catch (e) {
-    console.error("Error saving backlog", e);
-  }
+// Coalesces rapid-fire changes (e.g. typing) into a single call ~1s after
+// the last change, instead of firing a request per keystroke.
+function debounce(fn, delayMs = 1000) {
+  let timer = null;
+  return (...args) => {
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(() => {
+      timer = null;
+      fn(...args);
+    }, delayMs);
+  };
 }
 
 // --- Helpers ---
@@ -230,11 +223,6 @@ function renderStatusBar() {
     statusDataFileEl.textContent = config.dataFile
       ? `Data file: ${config.dataFile}`
       : "Data file: (unknown)";
-  }
-  if (statusLastSyncEl) {
-    statusLastSyncEl.textContent = lastSyncAt
-      ? `Last sync: ${lastSyncAt.toLocaleTimeString()}`
-      : "Last sync: \u2014";
   }
 }
 
@@ -477,37 +465,13 @@ if (headerTypeToggle) {
   headerTypeToggle.addEventListener("click", toggleProjectType);
 }
 
-if (syncNowBtn) {
-  syncNowBtn.addEventListener("click", () => {
-    saveDataToServer();
-  });
-}
-
-// Flush a pending debounced auto-save if the tab closes before it fires.
-window.addEventListener("beforeunload", () => {
-  if (!autoSaveTimer) return;
-  clearTimeout(autoSaveTimer);
-  autoSaveTimer = null;
-  try {
-    navigator.sendBeacon("/api/backlog", new Blob([JSON.stringify(data)], { type: "application/json" }));
-  } catch (_) { /* sendBeacon unsupported; best-effort only */ }
-});
-
 // --- Init (auto-load) ---
 
 (async function init() {
   await loadConfig();
   await loadDataFromServer();
-  // Restore lastSyncAt across page navigations (survives full page reloads within the tab)
-  try {
-    const stored = sessionStorage.getItem("lastSyncAt");
-    if (stored) {
-      lastSyncAt = new Date(stored);
-    }
-  } catch (_) { /* sessionStorage may be unavailable */ }
   renderStatusBar();
   renderHeaderTypeToggle();
-  setInterval(saveDataToServer, 60_000); // periodic sync
   // Dispatch event so page-specific scripts can render
   document.dispatchEvent(new CustomEvent("app:ready"));
 })();
