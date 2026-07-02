@@ -181,9 +181,18 @@ async function readBacklogFromDB() {
 
 // GET /api/config — return storage configuration
 app.get('/api/config', (req, res) => {
+  let dataTimestamp = 0;
+  try {
+    if (fs.existsSync(DB_PATH)) {
+      dataTimestamp = fs.statSync(DB_PATH).mtimeMs;
+    }
+  } catch (e) {
+    // ignore stat failures
+  }
   res.json({
     dataDir: DATA_DIR,
-    dataFile: DB_PATH
+    dataFile: DB_PATH,
+    dataTimestamp
   });
 });
 

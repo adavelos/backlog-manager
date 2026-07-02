@@ -27,11 +27,14 @@ async function loadConfig() {
   try {
     const resp = await fetch("/api/config");
     if (resp.ok) {
-      config = await resp.json();
+      const result = await resp.json();
+      config = result;
+      return result;
     }
   } catch (e) {
     console.error("Failed to load config", e);
   }
+  return null;
 }
 
 async function loadDataFromServer() {
@@ -50,6 +53,10 @@ async function loadDataFromServer() {
       return;
     }
     data = await resp.json();
+    // Invalidate page-specific render caches (e.g., tag/project chip cache in boards.js)
+    if (typeof window.invalidateRenderCaches === 'function') {
+      window.invalidateRenderCaches();
+    }
     // Backwards compatibility: ensure missing fields exist
     for (const project of data.projects) {
       if (project.description === undefined) project.description = "";
@@ -478,7 +485,7 @@ if (headerTypeToggle) {
 
 // --- SessionStorage cache (instant navigation) ---
 
-const CACHE_KEY = 'backlog_cache_v1';
+const CACHE_KEY = 'backlog_cache_v2';
 
 function saveCache(data, config) {
   try {
@@ -500,30 +507,73 @@ function loadCache() {
   }
 }
 
+/**
+ * Check if the cached data is stale by comparing dataTimestamps.
+ * Can compare against a provided serverConfig to avoid re-fetching.
+ */
+function isCacheStale(cached, serverConfig) {
+  if (!cached || !cached.config || !cached.config.dataTimestamp) return false;
+  // Use provided serverConfig if available, otherwise use global config
+  const cfg = serverConfig || config;
+  if (!cfg || !cfg.dataTimestamp) return false;
+  return cfg.dataTimestamp !== cached.config.dataTimestamp;
+}
+
 // --- Init (auto-load) ---
 
 (async function init() {
+  const t0 = performance.now();
   const cached = loadCache();
+  const t1 = performance.now();
 
-  if (cached) {
-    // ── Instant render from cache ──
+  // If we have cached data, check staleness using the cached config timestamp.
+  // Only fetch server config if cache is missing—this avoids an API call on every navigation.
+  let serverConfig = null;
+  let configFetchTime = 0;
+
+  if (!cached) {
+    // No cache—must fetch both config and data from server
+    const t2 = performance.now();
+    serverConfig = await loadConfig();
+    configFetchTime = performance.now() - t2;
+  }
+
+  if (cached && !isCacheStale(cached, serverConfig)) {
+    // ── Instant render from cache (no need to check server) ──
     config = cached.config;
     data = cached.data;
+    // Invalidate page-specific render caches when loading from cache
+    if (typeof window.invalidateRenderCaches === 'function') {
+      window.invalidateRenderCaches();
+    }
     renderStatusBar();
     renderHeaderTypeToggle();
-    // Schedule app:ready as a microtask so it runs AFTER all synchronous
-    // <script> tags (especially the page-specific script) have loaded and
-    // registered their listeners — otherwise the event would fire too early.
-    Promise.resolve().then(() => {
-      document.dispatchEvent(new CustomEvent("app:ready"));
-    });
-  } else {
-    // ── Fresh load from server ──
-    await Promise.all([loadConfig(), loadDataFromServer()]);
-    saveCache(data, config);
-    renderStatusBar();
-    renderHeaderTypeToggle();
+    const t2 = performance.now();
+    // Fire app:ready synchronously—page scripts already loaded synchronously.
     document.dispatchEvent(new CustomEvent("app:ready"));
+    console.log(`[PERF] Cache hit: ${(t2-t0).toFixed(0)}ms`);
+  } else {
+    // ── Fresh load from server (no cache, or cache is stale) ──
+    if (cached) {
+      console.log('Cache stale — loading fresh data from server');
+    }
+    if (!serverConfig) {
+      // We skipped loadConfig because cache existed; fetch it now that we know cache is stale
+      const t2 = performance.now();
+      serverConfig = await loadConfig();
+      configFetchTime = performance.now() - t2;
+    }
+    config = serverConfig || {};
+    const t2 = performance.now();
+    await loadDataFromServer();
+    const t3 = performance.now();
+    saveCache(data, config);
+    const t4 = performance.now();
+    renderStatusBar();
+    renderHeaderTypeToggle();
+    const t5 = performance.now();
+    document.dispatchEvent(new CustomEvent("app:ready"));
+    console.log(`[PERF] Fresh load: ${(t5-t0).toFixed(0)}ms`);
   }
 })();
 

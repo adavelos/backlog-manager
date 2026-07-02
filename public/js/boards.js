@@ -7,6 +7,20 @@ let view = "state";         // "state" | "release"
 let quickEditMode = false;
 let qeEditingCell = null;
 let showArchivePanel = false;
+let _cachedTags = null;     // Cache for computed tags
+let _cachedProjects = null; // Cache for computed projects
+
+// Priority ranking (higher index = higher priority)
+const PRIORITIES = ["LOW", "MEDIUM", "HIGH", "CRITICAL"];
+
+function sortByPriority(items) {
+  return items.sort((a, b) => {
+    const pA = PRIORITIES.indexOf(a.priority);
+    const pB = PRIORITIES.indexOf(b.priority);
+    if (pA !== pB) return pB - pA;
+    return (b.updatedAt || 0) - (a.updatedAt || 0);
+  });
+}
 
 // Fractional indexing: pick a sortOrder between two neighbors without
 // touching their rows, so a drag-reorder is a single scoped item update.
@@ -17,6 +31,13 @@ function computeSortOrder(prevItem, nextItem) {
   if (prev == null) return next - 1;
   if (next == null) return prev + 1;
   return (prev + next) / 2;
+}
+
+// Invalidate render caches when data changes
+function invalidateRenderCaches() {
+  _cachedTags = null;
+  _cachedProjects = null;
+  _lastBoardView = null;
 }
 
 // DOM refs
@@ -73,10 +94,24 @@ window.addEventListener("popstate", () => {
 // --- Rendering: chips & views ---
 
 function renderProjectChips() {
-  projectChipsEl.innerHTML = "";
   const scopeProjects = data.projects.filter(p => p.type === activeProjectType)
     .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
 
+  // Check if projects changed to avoid unnecessary DOM recreation
+  const projectIds = scopeProjects.map(p => p.id).join(',');
+  if (_cachedProjects === projectIds) {
+    // Projects haven't changed—just update active state
+    const allChip = projectChipsEl.querySelector(".chip-project");
+    if (allChip) allChip.classList.toggle("active", currentProjectId === "ALL");
+    scopeProjects.forEach(project => {
+      const chip = Array.from(projectChipsEl.querySelectorAll(".chip-project")).find(c => c.textContent === project.name);
+      if (chip) chip.classList.toggle("active", currentProjectId === project.id);
+    });
+    return;
+  }
+
+  _cachedProjects = projectIds;
+  projectChipsEl.innerHTML = "";
   const allChip = document.createElement("button");
   allChip.className = "chip chip-project" + (currentProjectId === "ALL" ? " active" : "");
   allChip.textContent = "All projects";
@@ -99,10 +134,24 @@ function renderProjectChips() {
 }
 
 function renderTagChips() {
-  tagChipsEl.innerHTML = "";
   const tags = new Set();
   data.items.forEach(item => (item.tags || []).forEach(t => tags.add(t)));
-  Array.from(tags).sort().forEach(tag => {
+  const sortedTags = Array.from(tags).sort();
+
+  // Check if tags changed to avoid unnecessary DOM recreation
+  const tagStr = sortedTags.join(',');
+  if (_cachedTags === tagStr) {
+    // Tags haven't changed—just update active state
+    sortedTags.forEach(tag => {
+      const chip = Array.from(tagChipsEl.querySelectorAll(".chip")).find(c => c.textContent === tag);
+      if (chip) chip.classList.toggle("active", activeTags.has(tag));
+    });
+    return;
+  }
+
+  _cachedTags = tagStr;
+  tagChipsEl.innerHTML = "";
+  sortedTags.forEach(tag => {
     const chip = document.createElement("button");
     chip.className = "chip" + (activeTags.has(tag) ? " active" : "");
     chip.textContent = tag;
@@ -129,6 +178,8 @@ function renderViewButtons() {
 
 // --- Rendering: boards & archive ---
 
+let _lastBoardView = null;  // Track which view was last rendered to avoid unnecessary DOM recreation
+
 function renderBoard() {
   const items = getVisibleBoardItems();
 
@@ -141,6 +192,16 @@ function renderBoard() {
 
   boardColumnsEl.classList.remove("hidden");
   qeViewEl.classList.add("hidden");
+
+  // Only clear and re-render if the view type changed (quick optimization)
+  // Full re-render needed only when switching between state/release views
+  if (_lastBoardView === view && boardColumnsEl.children.length > 0) {
+    // View unchanged—skip clearing and re-rendering the board structure
+    // (Updates to card states happen via event handlers)
+    return;
+  }
+
+  _lastBoardView = view;
   boardColumnsEl.innerHTML = "";
 
   if (view === "state") {
@@ -189,7 +250,7 @@ function renderStateBoard(items) {
     const dropzone = document.createElement("div");
     dropzone.className = "column-dropzone";
     dropzone.dataset.state = state;
-    byState[state].forEach(item => {
+    sortByPriority(byState[state]).forEach(item => {
       dropzone.appendChild(renderItemCard(item));
     });
 
@@ -275,7 +336,7 @@ function renderReleaseBoard(items) {
     const dropzone = document.createElement("div");
     dropzone.className = "column-dropzone";
     dropzone.dataset.releaseId = relId;
-    groups[relId].forEach(item => {
+    sortByPriority(groups[relId]).forEach(item => {
       dropzone.appendChild(renderItemCard(item));
     });
 
@@ -313,8 +374,6 @@ function renderReleaseBoard(items) {
 }
 
 function renderQuickEdit(items) {
-  const PRIORITIES = ["LOW", "MEDIUM", "HIGH", "CRITICAL"];
-
   let groups;
   if (view === "state") {
     const states = ["BACKLOG", "TODO", "ONGOING", "DONE"];
@@ -324,14 +383,7 @@ function renderQuickEdit(items) {
       if (!byState[item.state]) byState[item.state] = [];
       byState[item.state].push(item);
     });
-    states.forEach(s => {
-      byState[s].sort((a, b) => {
-        const pA = PRIORITIES.indexOf(a.priority);
-        const pB = PRIORITIES.indexOf(b.priority);
-        if (pA !== pB) return pB - pA;
-        return (b.updatedAt || 0) - (a.updatedAt || 0);
-      });
-    });
+    states.forEach(s => sortByPriority(byState[s]));
     groups = states.map(s => ({ id: s, label: s, items: byState[s] }));
   } else {
     if (currentProjectId === "ALL") {
@@ -350,6 +402,7 @@ function renderQuickEdit(items) {
       if (!byReleaseId[key]) byReleaseId[key] = [];
       byReleaseId[key].push(item);
     });
+    releaseIds.forEach(id => sortByPriority(byReleaseId[id]));
     groups = releaseIds.map(relId => ({
       id: relId,
       label: relId === "NO_RELEASE"
@@ -1260,6 +1313,7 @@ function renderAll() {
     }
   }
 
+  const t0 = performance.now();
   renderHeaderTypeToggle();
   renderProjectChips();
   renderTagChips();
@@ -1267,6 +1321,10 @@ function renderAll() {
   renderBoard();
   renderArchivePanel();
   saveStateToUrl();
+  const t1 = performance.now();
+  if ((t1 - t0) > 50) {
+    console.log(`[PERF] renderAll: ${(t1 - t0).toFixed(1)}ms`);
+  }
 }
 
 // --- Event wiring ---
@@ -1322,6 +1380,11 @@ document.addEventListener("dblclick", (ev) => {
 // --- Init (wait for common.js, then render) ---
 
 document.addEventListener("app:ready", () => {
+  const t0 = performance.now();
   loadStateFromUrl();
   renderAll();
+  const t1 = performance.now();
+  if ((t1 - t0) > 50) {
+    console.log(`[PERF] Boards page ready: ${(t1 - t0).toFixed(1)}ms`);
+  }
 });
