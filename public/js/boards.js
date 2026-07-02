@@ -176,9 +176,41 @@ function renderStateBoard(items) {
 
     const dropzone = document.createElement("div");
     dropzone.className = "column-dropzone";
+    dropzone.dataset.state = state;
     byState[state].forEach(item => {
       dropzone.appendChild(renderItemCard(item));
     });
+
+    dropzone.addEventListener("dragover", (ev) => {
+      ev.preventDefault();
+      ev.dataTransfer.dropEffect = "move";
+      dropzone.classList.add("qe-drag-over");
+    });
+    dropzone.addEventListener("dragleave", () => {
+      dropzone.classList.remove("qe-drag-over");
+    });
+    dropzone.addEventListener("drop", (ev) => {
+      dropzone.classList.remove("qe-drag-over");
+      ev.preventDefault();
+      const draggedItemId = ev.dataTransfer.getData("text/plain");
+      if (!draggedItemId) return;
+      const draggedItem = data.items.find(i => i.id === draggedItemId);
+      if (!draggedItem) return;
+
+      const targetState = state;
+      if (draggedItem.state !== targetState) {
+        draggedItem.state = targetState;
+        draggedItem.updatedAt = Date.now();
+        if (targetState === "DONE") {
+          draggedItem.completedAt = Date.now();
+        } else if (draggedItem.state !== "DONE") {
+          draggedItem.completedAt = null;
+        }
+        saveDataToServer();
+        renderAll();
+      }
+    });
+
     columnEl.appendChild(dropzone);
 
     boardColumnsEl.appendChild(columnEl);
@@ -225,9 +257,36 @@ function renderReleaseBoard(items) {
 
     const dropzone = document.createElement("div");
     dropzone.className = "column-dropzone";
+    dropzone.dataset.releaseId = relId;
     groups[relId].forEach(item => {
       dropzone.appendChild(renderItemCard(item));
     });
+
+    dropzone.addEventListener("dragover", (ev) => {
+      ev.preventDefault();
+      ev.dataTransfer.dropEffect = "move";
+      dropzone.classList.add("qe-drag-over");
+    });
+    dropzone.addEventListener("dragleave", () => {
+      dropzone.classList.remove("qe-drag-over");
+    });
+    dropzone.addEventListener("drop", (ev) => {
+      dropzone.classList.remove("qe-drag-over");
+      ev.preventDefault();
+      const draggedItemId = ev.dataTransfer.getData("text/plain");
+      if (!draggedItemId) return;
+      const draggedItem = data.items.find(i => i.id === draggedItemId);
+      if (!draggedItem) return;
+
+      const targetReleaseId = relId === "NO_RELEASE" ? null : relId;
+      if (draggedItem.releaseId !== targetReleaseId) {
+        draggedItem.releaseId = targetReleaseId;
+        draggedItem.updatedAt = Date.now();
+        saveDataToServer();
+        renderAll();
+      }
+    });
+
     columnEl.appendChild(dropzone);
 
     boardColumnsEl.appendChild(columnEl);
