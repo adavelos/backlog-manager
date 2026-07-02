@@ -616,7 +616,22 @@ function renderItemCard(item) {
 
   const titleEl = document.createElement("div");
   titleEl.className = "item-title";
-  titleEl.textContent = item.title;
+
+  const titleTextEl = document.createElement("span");
+  titleTextEl.className = "item-title-text";
+  titleTextEl.textContent = item.title;
+  titleEl.appendChild(titleTextEl);
+
+  const promptBtn = document.createElement("button");
+  promptBtn.className = "item-prompt-btn";
+  promptBtn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></svg>`;
+  promptBtn.title = "Copy AI prompt to clipboard";
+  promptBtn.addEventListener("click", e => {
+    e.stopPropagation();
+    copyItemPromptToClipboard(item);
+  });
+  titleEl.appendChild(promptBtn);
+
   card.appendChild(titleEl);
 
   const metaEl = document.createElement("div");
@@ -786,6 +801,20 @@ async function openItemDetail(itemId) {
     title: "Edit item",
     bodyHtml,
     onOpen: () => {
+      const modalHeaderEl = document.querySelector(".modal-header");
+      if (modalHeaderEl && !modalHeaderEl.querySelector(".modal-prompt-btn")) {
+        const promptBtn = document.createElement("button");
+        promptBtn.className = "modal-prompt-btn";
+        promptBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></svg>`;
+        promptBtn.title = "Copy AI prompt to clipboard";
+        promptBtn.addEventListener("click", () => copyItemPromptToClipboard(item));
+        const maximizeBtn = modalHeaderEl.querySelector(".modal-maximize-btn");
+        if (maximizeBtn) {
+          modalHeaderEl.insertBefore(promptBtn, maximizeBtn);
+        } else {
+          modalHeaderEl.appendChild(promptBtn);
+        }
+      }
       document.querySelectorAll("#idSubitems .si-check").forEach(cb => {
         cb.addEventListener("change", () => {
           const row = cb.closest(".subitem-row");

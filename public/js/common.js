@@ -40,25 +40,35 @@ async function loadConfig() {
 async function loadDataFromServer() {
   try {
     const resp = await fetch("/api/backlog");
-    if (resp.ok) {
-      data = await resp.json();
-      // Backwards compatibility: ensure all releases and projects have a description field
-      for (const project of data.projects) {
-        if (project.description === undefined) {
-          project.description = "";
-        }
-        if (project.releases) {
-          for (const release of project.releases) {
-            if (release.description === undefined) {
-              release.description = "";
-            }
+    if (!resp.ok) {
+      console.error("Server error loading backlog:", resp.status, resp.statusText);
+      const err = await resp.json().catch(() => ({}));
+      if (resp.status === 500) {
+        alert(
+          "ERROR: Data file corruption detected.\n\n" +
+          (err.message || "The backlog data file could not be read. A backup may exist at backlog.json.bak") +
+          "\n\nPlease check the server logs and restore from backup if needed."
+        );
+      }
+      return;
+    }
+    data = await resp.json();
+    // Backwards compatibility: ensure all releases and projects have a description field
+    for (const project of data.projects) {
+      if (project.description === undefined) {
+        project.description = "";
+      }
+      if (project.releases) {
+        for (const release of project.releases) {
+          if (release.description === undefined) {
+            release.description = "";
           }
         }
       }
-      // Backwards compatibility: ensure notes array exists
-      if (!data.notes) {
-        data.notes = [];
-      }
+    }
+    // Backwards compatibility: ensure notes array exists
+    if (!data.notes) {
+      data.notes = [];
     }
   } catch (e) {
     console.error("Failed to load backlog", e);
@@ -87,6 +97,81 @@ async function saveDataToServer() {
 
 function generateId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+}
+
+function escapeHtml(text) {
+  if (!text) return "";
+  const map = {
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  };
+  return String(text).replace(/[&<>"']/g, m => map[m]);
+}
+
+function buildItemPrompt(item) {
+  const filesLines = (item.filesAffected && item.filesAffected.length > 0)
+    ? item.filesAffected.map(f => `- ${f}`).join("\n")
+    : "(none)";
+  return `# ${item.title}
+
+## Analysis
+${item.analysis && item.analysis.trim() ? item.analysis : "(none)"}
+
+## Files Affected
+${filesLines}
+
+## Prompt
+${item.prompt && item.prompt.trim() ? item.prompt : "(none)"}`;
+}
+
+let _toastEl = null;
+let _toastTimer = null;
+
+function showToast(message) {
+  if (!_toastEl) {
+    _toastEl = document.createElement("div");
+    _toastEl.className = "toast";
+    document.body.appendChild(_toastEl);
+  }
+  _toastEl.textContent = message;
+  _toastEl.classList.add("show");
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => {
+    _toastEl.classList.remove("show");
+  }, 2000);
+}
+
+function copyItemPromptToClipboard(item) {
+  const text = buildItemPrompt(item);
+  const onSuccess = () => showToast("Prompt copied to clipboard");
+  const onFailure = () => showToast("Failed to copy prompt");
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(onSuccess).catch(() => {
+      copyViaFallback(text) ? onSuccess() : onFailure();
+    });
+  } else {
+    copyViaFallback(text) ? onSuccess() : onFailure();
+  }
+}
+
+function copyViaFallback(text) {
+  try {
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    textarea.style.position = "fixed";
+    textarea.style.opacity = "0";
+    document.body.appendChild(textarea);
+    textarea.focus();
+    textarea.select();
+    const ok = document.execCommand("copy");
+    document.body.removeChild(textarea);
+    return ok;
+  } catch (e) {
+    return false;
+  }
 }
 
 function isArchivedDone(item) {
@@ -268,6 +353,7 @@ function openModal({ title, message, showInput, inputPlaceholder, inputValue, bu
     }
     modalFooter.innerHTML = "";
     let keyHandler = null;
+    let focusedBtnEl = null;
     const cleanup = () => {
       if (keyHandler) {
         document.removeEventListener("keydown", keyHandler);
@@ -289,7 +375,10 @@ function openModal({ title, message, showInput, inputPlaceholder, inputValue, bu
         }
       });
       modalFooter.appendChild(el);
-      if (btn.focused) setTimeout(() => el.focus(), 50);
+      if (btn.focused) {
+        focusedBtnEl = el;
+        setTimeout(() => el.focus(), 50);
+      }
     });
     modalOverlay.classList.remove("hidden");
     setupMaximizeButton(modalDialog);
@@ -300,12 +389,20 @@ function openModal({ title, message, showInput, inputPlaceholder, inputValue, bu
         resolve(null);
       }
       if (e.key === "Enter") {
-        const inp = document.getElementById("modalInput");
-        if (inp && inp.value.trim()) {
-          e.preventDefault();
-          cleanup();
-          closeModal();
-          resolve(inp.value.trim());
+        // If Shift+Enter is pressed, let the browser insert a newline
+        if (e.shiftKey) return;
+        // If focus is in a textarea, let the browser handle Enter (newline)
+        if (e.target && e.target.tagName === "TEXTAREA") return;
+        e.preventDefault();
+        if (focusedBtnEl) {
+          focusedBtnEl.click();
+        } else {
+          const inp = document.getElementById("modalInput");
+          if (inp && inp.value.trim()) {
+            cleanup();
+            closeModal();
+            resolve(inp.value.trim());
+          }
         }
       }
     };
