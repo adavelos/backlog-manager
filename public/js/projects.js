@@ -755,7 +755,7 @@ if (addReleaseBtn) {
 
 // --- Init (wait for common.js, then render) ---
 
-document.addEventListener("app:ready", () => {
+window.appReady.then(() => {
   loadStateFromUrl();
   renderAll();
   setupContainerDnD();

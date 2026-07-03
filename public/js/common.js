@@ -210,20 +210,25 @@ function isArchivedDone(item) {
   return ageDays > 7;
 }
 
+function matchesActiveFilters(item) {
+  // project filter
+  if (currentProjectId !== "ALL" && item.projectId !== currentProjectId) return false;
+  // project type filter
+  const project = data.projects.find(p => p.id === item.projectId);
+  if (!project || project.type !== activeProjectType) return false;
+  // tag filter
+  if (activeTags.size > 0) {
+    const tagsSet = new Set(item.tags || []);
+    for (const t of activeTags) {
+      if (!tagsSet.has(t)) return false;
+    }
+  }
+  return true;
+}
+
 function getVisibleBoardItems() {
   return data.items.filter(item => {
-    // project filter
-    if (currentProjectId !== "ALL" && item.projectId !== currentProjectId) return false;
-    // project type filter
-    const project = data.projects.find(p => p.id === item.projectId);
-    if (!project || project.type !== activeProjectType) return false;
-    // tag filter
-    if (activeTags.size > 0) {
-      const tagsSet = new Set(item.tags || []);
-      for (const t of activeTags) {
-        if (!tagsSet.has(t)) return false;
-      }
-    }
+    if (!matchesActiveFilters(item)) return false;
     // hide archived DONE from board
     if (isArchivedDone(item)) return false;
     return true;
@@ -231,7 +236,7 @@ function getVisibleBoardItems() {
 }
 
 function getArchivedItems() {
-  return data.items.filter(isArchivedDone);
+  return data.items.filter(item => isArchivedDone(item) && matchesActiveFilters(item));
 }
 
 // --- Rendering: status bar ---
@@ -521,7 +526,14 @@ function isCacheStale(cached, serverConfig) {
 
 // --- Init (auto-load) ---
 
-(async function init() {
+// Page scripts (boards.js, projects.js, notes.js) await window.appReady instead
+// of listening for an "app:ready" event. An event's delivery depends on the
+// listener already being registered at the moment it fires, which is not
+// guaranteed across separate <script> tags (a microtask can fire before the
+// next script has even been fetched, and a macrotask can race the same fetch).
+// A promise has no such race: .then() runs immediately if already resolved,
+// or later if not—correct regardless of which script finishes loading first.
+window.appReady = (async function init() {
   const t0 = performance.now();
   const cached = loadCache();
   const t1 = performance.now();
@@ -549,12 +561,7 @@ function isCacheStale(cached, serverConfig) {
     renderStatusBar();
     renderHeaderTypeToggle();
     const t2 = performance.now();
-    // Fire app:ready as microtask so page-specific scripts (boards.js, etc.)
-    // have loaded and registered their listeners before the event fires.
-    Promise.resolve().then(() => {
-      document.dispatchEvent(new CustomEvent("app:ready"));
-      console.log(`[PERF] Cache hit: ${(t2-t0).toFixed(0)}ms`);
-    });
+    console.log(`[PERF] Cache hit: ${(t2-t0).toFixed(0)}ms`);
   } else {
     // ── Fresh load from server (no cache, or cache is stale) ──
     if (cached) {
@@ -575,7 +582,6 @@ function isCacheStale(cached, serverConfig) {
     renderStatusBar();
     renderHeaderTypeToggle();
     const t5 = performance.now();
-    document.dispatchEvent(new CustomEvent("app:ready"));
     console.log(`[PERF] Fresh load: ${(t5-t0).toFixed(0)}ms`);
   }
 })();

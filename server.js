@@ -422,6 +422,10 @@ app.patch('/api/items/:id', async (req, res) => {
   const { id } = req.params;
   const body = req.body;
 
+  if (body.title !== undefined && !body.title.trim()) {
+    return res.status(400).json({ status: 'error', message: 'Title cannot be empty' });
+  }
+
   try {
     const existing = await dbGet('SELECT * FROM items WHERE id = ?', [id]);
     if (!existing) {

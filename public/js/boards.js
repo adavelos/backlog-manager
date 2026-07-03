@@ -37,7 +37,6 @@ function computeSortOrder(prevItem, nextItem) {
 function invalidateRenderCaches() {
   _cachedTags = null;
   _cachedProjects = null;
-  _lastBoardView = null;
 }
 
 // DOM refs
@@ -178,8 +177,6 @@ function renderViewButtons() {
 
 // --- Rendering: boards & archive ---
 
-let _lastBoardView = null;  // Track which view was last rendered to avoid unnecessary DOM recreation
-
 function renderBoard() {
   const items = getVisibleBoardItems();
 
@@ -193,15 +190,6 @@ function renderBoard() {
   boardColumnsEl.classList.remove("hidden");
   qeViewEl.classList.add("hidden");
 
-  // Only clear and re-render if the view type changed (quick optimization)
-  // Full re-render needed only when switching between state/release views
-  if (_lastBoardView === view && boardColumnsEl.children.length > 0) {
-    // View unchanged—skip clearing and re-rendering the board structure
-    // (Updates to card states happen via event handlers)
-    return;
-  }
-
-  _lastBoardView = view;
   boardColumnsEl.innerHTML = "";
 
   if (view === "state") {
@@ -387,7 +375,7 @@ function renderQuickEdit(items) {
     groups = states.map(s => ({ id: s, label: s, items: byState[s] }));
   } else {
     if (currentProjectId === "ALL") {
-      boardColumnsEl.innerHTML = `<div style="padding:12px;font-size:12px;color:var(--text-muted)">Select a specific project to view the Release board.</div>`;
+      qeViewEl.innerHTML = `<div style="padding:12px;font-size:12px;color:var(--text-muted)">Select a specific project to view the Release board.</div>`;
       return;
     }
     const project = data.projects.find(p => p.id === currentProjectId);
@@ -608,8 +596,8 @@ function renderQuickEdit(items) {
     container.appendChild(groupEl);
   });
 
-  boardColumnsEl.innerHTML = "";
-  boardColumnsEl.appendChild(container);
+  qeViewEl.innerHTML = "";
+  qeViewEl.appendChild(container);
 }
 
 // --- Quick Edit inline editing ---
@@ -693,13 +681,22 @@ function qeCommitEditCell(td, value) {
     row.draggable = true;
   }
 
-  const changed = item.title !== value;
-  item.title = value;
-  td.textContent = value;
-  td.title = value;
+  const trimmed = value.trim();
   qeEditingCell = null;
+  if (!trimmed) {
+    // Reject empty titles—revert to the item's existing title, same as the
+    // Add Item modal and POST /api/items.
+    td.textContent = item.title;
+    td.title = item.title;
+    return;
+  }
+
+  const changed = item.title !== trimmed;
+  item.title = trimmed;
+  td.textContent = trimmed;
+  td.title = trimmed;
   if (changed) {
-    syncMutation(() => apiUpdateItem(item.id, { title: value }), {
+    syncMutation(() => apiUpdateItem(item.id, { title: trimmed }), {
       errorMessage: "Failed to save title"
     });
   }
@@ -773,10 +770,12 @@ function renderItemCard(item) {
   priorityBadge.textContent = item.priority;
   metaEl.appendChild(priorityBadge);
 
-  const typeBadge = document.createElement("span");
-  typeBadge.className = `badge type-${item.type}`;
-  typeBadge.textContent = item.type === "FEATURE" ? "Feature" : "Bug";
-  metaEl.appendChild(typeBadge);
+  if (item.type === "FEATURE" || item.type === "BUG") {
+    const typeBadge = document.createElement("span");
+    typeBadge.className = `badge type-${item.type}`;
+    typeBadge.textContent = item.type === "FEATURE" ? "Feature" : "Bug";
+    metaEl.appendChild(typeBadge);
+  }
 
   if (item.releaseId) {
     const relBadge = document.createElement("span");
@@ -1253,14 +1252,15 @@ async function addItem(targetState) {
 // --- Archive panel ---
 
 function renderArchivePanel() {
+  const contentEl = quickEditMode ? qeViewEl : boardColumnsEl;
   if (!showArchivePanel) {
     archivePanelEl.classList.add("hidden");
-    boardColumnsEl.classList.remove("hidden");
+    contentEl.classList.remove("hidden");
     return;
   }
   const archived = getArchivedItems();
   archivePanelEl.classList.remove("hidden");
-  boardColumnsEl.classList.add("hidden");
+  contentEl.classList.add("hidden");
   archiveListEl.innerHTML = "";
 
   archived.forEach(item => {
@@ -1379,7 +1379,7 @@ document.addEventListener("dblclick", (ev) => {
 
 // --- Init (wait for common.js, then render) ---
 
-document.addEventListener("app:ready", () => {
+window.appReady.then(() => {
   const t0 = performance.now();
   loadStateFromUrl();
   renderAll();
