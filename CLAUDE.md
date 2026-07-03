@@ -2,9 +2,22 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## ⚠️ AGENTIC SAFETY: READ FIRST
+
+**This is a production app with live local data at `~/.backlog/data/backlog.db`**
+
+**AGENTS MUST FOLLOW THESE RULES:**
+1. **Never execute database operations** — No migrations, no restores, no file modifications
+2. **Never run shell commands that modify data** — No `node restore-from-json.js`, no `sqlite3` writes
+3. **Create migration scripts, don't execute them** — Write migration code in `server.js:migrateDB()` and show it in a commit, but the user runs it
+4. **Use APIs for testing** — Read data via `GET` endpoints only; no direct database access
+5. **Respect the local state** — Assume the database is valid and in-use. Don't "fix" it without asking
+
+**If you break these rules, you will corrupt the user's backlog data. Don't do it.**
+
 ## Project Overview
 
-**Backlog Manager** is a local-first backlog management web app. It's a single-user, file-based system with no external dependencies or databases—all data persists to JSON at `~/.backlog/data/backlog.json`.
+**Backlog Manager** is a local-first backlog management web app. It's a single-user system with SQLite persistence at `~/.backlog/data/backlog.db`. A JSON backup (`backlog.json.bak`) is maintained for emergency recovery.
 
 **Key features:**
 - Kanban boards: state-based (BACKLOG/TODO/ONGOING/DONE) or release-based columns
@@ -23,7 +36,7 @@ npm start               # Starts Express server on port 3000
 open http://localhost:3000
 ```
 
-The server defaults to storing data at `~/.backlog/data/backlog.json`. Override via `BACKLOG_DATA_DIR` env var if needed.
+The server defaults to storing data at `~/.backlog/data/backlog.db`. Override via `BACKLOG_DATA_DIR` env var if needed.
 
 Control via shell scripts:
 ```bash
@@ -31,19 +44,27 @@ Control via shell scripts:
 ./stop.sh               # Kill the background process
 ```
 
+**If data is lost or corrupted**, see [RECOVERY.md](RECOVERY.md) for restoration instructions.
+
 ## Architecture
 
 ### Backend (Node.js / Express)
 
-**`server.js`** — Minimal Express app with two JSON endpoints:
-- `GET /api/config` — Returns data directory and file path
-- `GET /api/backlog` — Full data snapshot (projects + items + notes)
-- `POST /api/backlog` — Accept new snapshot, write atomically with backup
+**`server.js`** — Express app with SQLite backend and RESTful endpoints:
+- `GET /api/config` — Returns data directory and database file path
+- `GET /api/backlog` — Full data snapshot (projects + items + notes) for initial page load
+- `GET /api/projects` — List all projects with nested releases
+- `POST/PATCH/DELETE /api/projects/:id` — Project management
+- `POST/PATCH/DELETE /api/releases/:id` — Release management
+- `GET/POST/PATCH/DELETE /api/items` — Item/backlog operations
+- `POST/PATCH/DELETE /api/notes/:id` — Notes management
+- `PATCH /api/scratchpads/:type` — Scratchpad updates (work/argonath)
 
 Key safety measures:
-- **Atomic writes**: Write to temp file first, then `renameSync()` to prevent corruption on crash
-- **Backup on every write**: Old file backed up to `backlog.json.bak` before overwrite
-- **Corruption detection**: Parse errors → HTTP 500, not silent failure
+- **SQLite with WAL mode**: Write-ahead logging for crash safety
+- **Foreign key constraints**: Enforces data integrity (cascade deletes)
+- **JSON backup**: `backlog.json.bak` kept for emergency recovery
+- **Corruption detection**: Parse errors → HTTP 500, detailed logging
 - Serves static files from `public/`
 
 ### Frontend (Vanilla JS)
@@ -84,13 +105,16 @@ Key safety measures:
 
 ### Data Flow
 
-1. **Load**: On page load, `common.js` calls `loadDataFromServer()` which fetches the full JSON snapshot
+1. **Load**: On page load, `common.js` calls `loadDataFromServer()` which fetches `/api/backlog` (all projects, items, notes)
 2. **Edit**: User modifies local in-memory `data` object (add/edit items, change state, etc.)
-3. **Save**: `saveDataToServer()` POSTs the entire modified snapshot back; `scheduleAutoSave()` debounces rapid changes (1s default)
-4. **Persist**: Server writes atomically (temp → rename) with backup
+3. **Save**: Individual API calls (`POST /api/items`, `PATCH /api/items/:id`, etc.) update the database
+4. **Persist**: Server writes to SQLite with WAL mode; JSON backup updated after each write
 5. **UI**: Each page calls `renderAll()` to re-render after changes
 
-**Key pattern**: Last-write-wins. If multiple tabs edit simultaneously, only the last POST survives. Single-tab usage is the intended workflow.
+**Key patterns**: 
+- REST API model: Each resource (project, item, note) has dedicated endpoints
+- Last-write-wins: If multiple tabs edit simultaneously, only the last write survives (single-tab usage is intended)
+- JSON backup: Updated after every successful database write for emergency recovery
 
 ## Important Patterns
 
@@ -213,15 +237,49 @@ If a server crash leaves corrupt JSON:
 
 ## Database Schema Changes
 
-**Always backup before modifying the schema:**
-```bash
-./backup.sh    # Creates timestamped backup, keeps last 7
-```
+⚠️ **CRITICAL: AGENTS MUST NOT EXECUTE SCHEMA CHANGES**
 
-When changing `db/init.sql`:
-1. Run `./backup.sh` to create a safe backup
-2. Add migration logic to `server.js:migrateDB()` to handle existing databases
-3. Test with an existing database to ensure the migration doesn't fail
-4. Document the change in the commit message
+When schema changes are needed:
 
-This ensures data safety if a migration needs to be rolled back.
+1. **Create the migration script** in `migrations/` with a timestamp prefix:
+   ```
+   migrations/001-add-column-to-items.sql
+   migrations/002-create-index.sql
+   ```
+
+2. **Update `server.js:migrateDB()`** with the migration logic (do NOT execute):
+   ```javascript
+   async function migrateDB() {
+     try {
+       await dbRun("ALTER TABLE items ADD COLUMN newField TEXT");
+       log.info('Migration: added newField to items');
+     } catch (e) {
+       if (!e.message.includes('duplicate column')) {
+         log.warn('Migration error: ' + e.message);
+       }
+     }
+   }
+   ```
+
+3. **Document in the commit message** what the migration does and why
+
+4. **DO NOT EXECUTE** — User will test and run migrations manually
+
+**Why this matters**: The local database is live production data. Only the user can run migrations after careful review and backup.
+
+## ⚠️ DO NOT RESTORE FROM JSON
+
+The `restore-from-json.js` script and `backlog.json.bak` file exist only for emergencies. **AGENTS MUST NEVER:**
+- Call `restore-from-json.js`
+- Modify `~/.backlog/data/`
+- Delete or alter `backlog.db`, `backlog.db-wal`, or `backlog.db-shm`
+- Read or write the actual database files
+
+The JSON backup is outdated. Use it only if explicitly instructed by the user.
+
+## Data Safety Rules for Agents
+
+1. **Read-only database access**: Use API endpoints to read data (GET requests)
+2. **Never modify local files**: No `fs.writeFileSync()`, no `db.run()` calls, no backup operations
+3. **Test migrations in isolation**: Create and show migration scripts, but don't execute them
+4. **Ask for user confirmation** before any database changes are committed to the codebase

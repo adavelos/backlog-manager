@@ -85,6 +85,7 @@ function renderProjectsManageList() {
     const itemEl = document.createElement("div");
     itemEl.className = "manage-item" + (selectedProjectId === project.id ? " selected" : "");
     itemEl.draggable = true;
+    itemEl.dataset.id = project.id;
 
     const dragHandle = document.createElement("span");
     dragHandle.className = "drag-handle";
@@ -181,8 +182,7 @@ function renderProjectsManageList() {
       itemEl.classList.remove("dragging");
       [...projectsManageListEl.querySelectorAll(".manage-item.dragover")].forEach(el => el.classList.remove("dragover"));
     });
-    itemEl.addEventListener("dragenter", e => {
-      e.preventDefault();
+    itemEl.addEventListener("dragenter", () => {
       itemEl.classList.add("dragover");
     });
     itemEl.addEventListener("dragleave", () => {
@@ -260,6 +260,7 @@ function renderReleasesManageList() {
     const itemEl = document.createElement("div");
     itemEl.className = "manage-item";
     itemEl.draggable = true;
+    itemEl.dataset.id = release.id;
 
     const dragHandle = document.createElement("span");
     dragHandle.className = "drag-handle";
@@ -332,8 +333,7 @@ function renderReleasesManageList() {
       itemEl.classList.remove("dragging");
       [...releasesManageListEl.querySelectorAll(".manage-item.dragover")].forEach(el => el.classList.remove("dragover"));
     });
-    itemEl.addEventListener("dragenter", e => {
-      e.preventDefault();
+    itemEl.addEventListener("dragenter", () => {
       itemEl.classList.add("dragover");
     });
     itemEl.addEventListener("dragleave", () => {
@@ -677,12 +677,7 @@ function setupContainerDnD() {
     const dragged = data.projects.find(p => p.id === draggedId);
     if (!dragged) return;
     const orderedEls = projectsManageListEl.querySelectorAll(".manage-item");
-    const orderedIds = Array.from(orderedEls).map(el => {
-      const titleEl = el.querySelector(".manage-item-title");
-      if (!titleEl) return null;
-      const found = data.projects.find(p => p.name === titleEl.textContent);
-      return found ? found.id : null;
-    }).filter(Boolean);
+    const orderedIds = Array.from(orderedEls).map(el => el.dataset.id).filter(Boolean);
     const sortedProjects = orderedIds.map(id => data.projects.find(p => p.id === id)).filter(Boolean);
     sortedProjects.forEach((p, idx) => {
       const prev = sortedProjects[idx - 1] || null;
@@ -721,13 +716,7 @@ function setupContainerDnD() {
     const dragged = project.releases.find(r => r.id === draggedId);
     if (!dragged) return;
     const orderedEls = releasesManageListEl.querySelectorAll(".manage-item");
-    const orderedIds = Array.from(orderedEls).map(el => {
-      const titleEl = el.querySelector(".manage-item-title");
-      if (!titleEl) return null;
-      const text = titleEl.textContent || "";
-      const found = project.releases.find(r => text.startsWith(r.name));
-      return found ? found.id : null;
-    }).filter(Boolean);
+    const orderedIds = Array.from(orderedEls).map(el => el.dataset.id).filter(Boolean);
     const sortedReleases = orderedIds.map(id => project.releases.find(r => r.id === id)).filter(Boolean);
     sortedReleases.forEach((r, idx) => {
       const prev = sortedReleases[idx - 1] || null;
