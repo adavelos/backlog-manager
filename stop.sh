@@ -1,15 +1,30 @@
 #!/bin/bash
+# Stops processes started by start.sh (dev mode) and/or serve.sh (prod mode).
 
-PID_FILE=/tmp/backlog-manager.pid
-
-if [ -f "$PID_FILE" ]; then
-  PID=$(cat "$PID_FILE")
-  rm -f "$PID_FILE"
-  if kill "$PID" 2>/dev/null; then
-    echo "Stopped Backlog Manager (PID: $PID)."
-    exit 0
+stop_by_pidfile() {
+  local pid_file="$1"
+  local label="$2"
+  if [ -f "$pid_file" ]; then
+    local pid
+    pid=$(cat "$pid_file")
+    rm -f "$pid_file"
+    if kill "$pid" 2>/dev/null; then
+      echo "Stopped $label (PID: $pid)."
+      return 0
+    fi
+    echo "$label PID file was stale (process $pid not running)."
   fi
-  echo "PID file was stale (process $PID not running). Trying pkill..."
+  return 1
+}
+
+if ! stop_by_pidfile /tmp/backlog-manager-backend.pid "backend (dev)"; then
+  pkill -f "uvicorn app.main:app" 2>/dev/null && echo "Stopped backend via pkill." || echo "No dev backend found."
 fi
 
-pkill -f "node server.js" && echo "Stopped." || echo "No running Backlog Manager found."
+if ! stop_by_pidfile /tmp/backlog-manager-frontend.pid "frontend (dev)"; then
+  pkill -f "vite --port" 2>/dev/null && echo "Stopped frontend via pkill." || echo "No dev frontend found."
+fi
+
+stop_by_pidfile /tmp/backlog-manager.pid "backend (prod)" || true
+
+echo "Done."

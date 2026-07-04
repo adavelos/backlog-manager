@@ -23,3 +23,14 @@ data/
 *.db
 *.db-wal
 *.db-shm
+*.sqlite3
+*.sqlite3-wal
+*.sqlite3-shm
+
+# Python
+backend/.venv/
+__pycache__/
+*.pyc
+
+# Frontend build output
+frontend/dist/
