@@ -14,14 +14,15 @@ const PRIORITIES = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']
 
 const sortedItems = computed(() =>
   props.items.slice().sort((a, b) => {
-    // If either has a non-zero sortOrder, use it for ordering
-    const aSort = a.sortOrder || 0
-    const bSort = b.sortOrder || 0
-    if ((aSort !== 0 || bSort !== 0) && aSort !== bSort) return aSort - bSort
-    // Otherwise sort by priority, then updatedAt
+    // First sort by priority (CRITICAL > HIGH > MEDIUM > LOW)
     const pA = PRIORITIES.indexOf(a.priority)
     const pB = PRIORITIES.indexOf(b.priority)
     if (pA !== pB) return pB - pA
+    // Then sort by sortOrder within same priority
+    const aSort = a.sortOrder || 0
+    const bSort = b.sortOrder || 0
+    if (aSort !== bSort) return aSort - bSort
+    // Fall back to updatedAt
     return (b.updatedAt || 0) - (a.updatedAt || 0)
   }),
 )
@@ -44,18 +45,19 @@ function onDrop(e) {
   const targetCard = e.target.closest('.item')
   const targetItemId = targetCard?.dataset.itemId
 
-  const draggedIsInColumn = props.items.some(i => i.id === draggedItemId)
-  const targetIsInColumn = targetItemId && props.items.some(i => i.id === targetItemId)
+  const draggedItem = props.items.find(i => i.id === draggedItemId)
+  const targetItem = targetItemId && props.items.find(i => i.id === targetItemId)
 
-  if (draggedIsInColumn && targetIsInColumn && targetItemId !== draggedItemId) {
-    // Reordering within the same column
-    emit('drop-reorder', { draggedItemId, targetItemId, sortedItems: sortedItems.value })
-  } else if (draggedIsInColumn) {
-    // Dropped on empty space in the same column or on self - no op
-    return
-  } else {
-    // Moving to a different column
-    emit('drop', draggedItemId)
+  if (draggedItem && targetItem && targetItemId !== draggedItemId) {
+    // Only allow reordering if both items have the same priority
+    if (draggedItem.priority === targetItem.priority) {
+      emit('drop-reorder', { draggedItemId, targetItemId, sortedItems: sortedItems.value })
+    }
+    // else: silently ignore drop on different priority (could add visual feedback here)
+  } else if (!draggedItem) {
+    // Dragged item not in this column - moving to a different column
+    const draggedFromOtherColumn = e.dataTransfer.getData('text/plain')
+    if (draggedFromOtherColumn) emit('drop', draggedFromOtherColumn)
   }
 }
 </script>

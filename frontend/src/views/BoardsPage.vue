@@ -19,6 +19,7 @@ const router = useRouter()
 const view = ref('state') // "state" | "release"
 const quickEditMode = ref(false)
 const showArchivePanel = ref(false)
+const activePriorities = ref(new Set(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']))
 const openItemId = ref(null)
 const addItemTargetState = ref(null)
 
@@ -28,6 +29,7 @@ onMounted(() => {
   if (q.project) state.currentProjectId = q.project
   if (q.type) state.activeProjectType = q.type
   if (q.tags) state.activeTags = new Set(String(q.tags).split(',').filter(Boolean))
+  if (q.priorities) activePriorities.value = new Set(String(q.priorities).split(',').filter(Boolean))
   if (q.qe) quickEditMode.value = true
   if (q.archive) showArchivePanel.value = true
 })
@@ -40,9 +42,18 @@ function syncUrl() {
   if (state.currentProjectId !== 'ALL') query.project = state.currentProjectId
   if (state.activeProjectType !== 'work') query.type = state.activeProjectType
   if (state.activeTags.size > 0) query.tags = Array.from(state.activeTags).join(',')
+  if (activePriorities.value.size > 0 && activePriorities.value.size < 4) {
+    query.priorities = Array.from(activePriorities.value).join(',')
+  }
   if (quickEditMode.value) query.qe = '1'
   if (showArchivePanel.value) query.archive = '1'
   router.replace({ query })
+}
+
+function togglePriority(priority) {
+  if (activePriorities.value.has(priority)) activePriorities.value.delete(priority)
+  else activePriorities.value.add(priority)
+  syncUrl()
 }
 
 const openItem = computed(() => (openItemId.value ? state.items.find((i) => i.id === openItemId.value) : null))
@@ -102,7 +113,11 @@ const activeReleases = computed(() =>
 const STATES = ['BACKLOG', 'TODO', 'ONGOING', 'DONE']
 
 const stateColumns = computed(() =>
-  STATES.map((s) => ({ id: s, label: s, items: visibleBoardItems.value.filter((i) => i.state === s) })),
+  STATES.map((s) => ({
+    id: s,
+    label: s,
+    items: visibleBoardItems.value.filter((i) => i.state === s && activePriorities.value.has(i.priority)),
+  })),
 )
 
 // --- Board columns (release view) ---
@@ -112,7 +127,9 @@ const releaseColumns = computed(() => {
   const cols = [{ id: 'NO_RELEASE', label: 'BACKLOG (no release)' }, ...activeReleases.value.map((r) => ({ id: r.id, label: r.name }))]
   return cols.map((c) => ({
     ...c,
-    items: visibleBoardItems.value.filter((i) => (i.releaseId || 'NO_RELEASE') === c.id),
+    items: visibleBoardItems.value.filter(
+      (i) => (i.releaseId || 'NO_RELEASE') === c.id && activePriorities.value.has(i.priority),
+    ),
   }))
 })
 
@@ -121,14 +138,15 @@ const releaseColumns = computed(() => {
 function sortByPriority(items) {
   const PRIORITIES = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']
   return items.slice().sort((a, b) => {
-    // If either has a non-zero sortOrder, use it for ordering
-    const aSort = a.sortOrder || 0
-    const bSort = b.sortOrder || 0
-    if ((aSort !== 0 || bSort !== 0) && aSort !== bSort) return aSort - bSort
-    // Otherwise sort by priority, then updatedAt
+    // First sort by priority (CRITICAL > HIGH > MEDIUM > LOW)
     const pA = PRIORITIES.indexOf(a.priority)
     const pB = PRIORITIES.indexOf(b.priority)
     if (pA !== pB) return pB - pA
+    // Then sort by sortOrder within same priority
+    const aSort = a.sortOrder || 0
+    const bSort = b.sortOrder || 0
+    if (aSort !== bSort) return aSort - bSort
+    // Fall back to updatedAt
     return (b.updatedAt || 0) - (a.updatedAt || 0)
   })
 }
@@ -381,6 +399,17 @@ function createItem(payload) {
         <div class="view-buttons qe-toggle-group">
           <button class="qe-toggle-button" :class="{ active: !quickEditMode }" @click="setQuickEdit(false)">Board</button>
           <button class="qe-toggle-button" :class="{ active: quickEditMode }" @click="setQuickEdit(true)">Quick Edit</button>
+        </div>
+        <div class="chip-bar">
+          <button
+            v-for="p in ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW']"
+            :key="p"
+            class="chip"
+            :class="{ active: activePriorities.has(p), [`priority-${p}`]: true }"
+            @click="togglePriority(p)"
+          >
+            {{ p }}
+          </button>
         </div>
       </div>
       <label class="archive-toggle">

@@ -55,14 +55,14 @@ The backend defaults to storing data at `~/.backlog/data/backlog.sqlite3`. Overr
 ```
 backend/
   app/
-    main.py            # FastAPI app, lifespan (runs Alembic migrations + seeds scratchpads), exception handlers, SPA static/fallback serving
+    main.py            # FastAPI app, lifespan (initializes schema + seeds scratchpads), exception handlers, SPA static/fallback serving
     config.py           # Settings: data dir, db filename, ports (pydantic-settings, BACKLOG_ env prefix)
     db.py                # SQLAlchemy engine/session, Base, get_db dependency (session-per-request = the TX boundary)
     models/               # ORM models: Project, Release, Item, Note, Scratchpad
     schemas/               # Pydantic Create/Update/Out models per resource (camelCase JSON via alias_generator, snake_case Python)
     routers/                # Thin HTTP layer, one router per resource + backlog.py (aggregate read)
     repositories/            # Query/persistence logic per resource, called by routers
-  alembic/                    # Migration scripts (generated via `alembic revision --autogenerate`, reviewed before running)
+    migrations.py           # Plain SQL schema initialization (no Alembic)
   requirements.txt             # Pinned deps for plain `pip install -r requirements.txt` (generated via `uv export`)
   pyproject.toml                # Source of truth for deps; managed with `uv`
 ```
@@ -203,16 +203,12 @@ See [RECOVERY.md](RECOVERY.md). In short: check backend logs (`/tmp/backlog-mana
 When schema changes are needed:
 
 1. **Update the SQLAlchemy model(s)** in `backend/app/models/`
-2. **Generate the migration** (does not touch the live DB by itself unless you point it at the real data dir):
-   ```bash
-   cd backend
-   uv run alembic revision --autogenerate -m "describe the change"
-   ```
-3. **Review the generated script** under `backend/alembic/versions/` — autogenerate is a starting point, not gospel (it won't detect data migrations, renames, or some constraint changes correctly)
-4. **Document in the commit message** what the migration does and why
-5. **DO NOT run `alembic upgrade head` against the user's real `~/.backlog/data/`** — the app already runs pending migrations automatically on startup (`main.py`'s `lifespan`), which the user triggers themselves by starting the app after reviewing your changes
+2. **Update the schema** in `backend/app/migrations.py` — add the SQL `CREATE TABLE` / `ALTER TABLE` statements to the `init_db()` function's SQL script
+3. **Add a conditional check** so the schema change only runs if that table/column doesn't already exist (the function already checks for existing tables and returns early if found)
+4. **Document in the commit message** what the schema change does and why
+5. **The app automatically applies schema on startup** via `main.py`'s `lifespan` calling `init_db()`, which the user triggers by starting the app after reviewing your changes
 
-**Why this matters**: The local database is live data. Only the user decides when a reviewed migration actually runs against it.
+**Why this matters**: The local database is live data. Only the user decides when a reviewed change actually runs against it.
 
 ## Data Safety Rules for Agents
 

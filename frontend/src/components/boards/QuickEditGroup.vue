@@ -80,8 +80,14 @@ function onDrop(e) {
   if (!draggedItemId) return
   const targetTr = e.target.closest('tr')
   const targetItemId = targetTr?.dataset.itemId
+
   if (targetItemId && targetItemId !== draggedItemId) {
-    emit('drop-reorder', { draggedItemId, targetItemId, groupId: props.group.id })
+    const draggedItem = props.group.items.find(i => i.id === draggedItemId)
+    const targetItem = props.group.items.find(i => i.id === targetItemId)
+    // Only allow reordering if both items have the same priority
+    if (draggedItem && targetItem && draggedItem.priority === targetItem.priority) {
+      emit('drop-reorder', { draggedItemId, targetItemId, groupId: props.group.id })
+    }
   } else if (!targetItemId) {
     emit('drop-move', { draggedItemId, groupId: props.group.id })
   }
