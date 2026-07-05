@@ -55,6 +55,22 @@ const visibleBoardItems = computed(() =>
   state.items.filter((item) => matchesActiveFilters(item) && !isArchivedDone(item)),
 )
 
+// Tags in use by items scoped to a project. `projectId` of 'ALL'/null scopes
+// to all projects of the current activeProjectType instead of a single project.
+function getTagsForProject(projectId) {
+  const tags = new Set()
+  state.items.forEach((item) => {
+    if (projectId && projectId !== 'ALL') {
+      if (item.projectId !== projectId) return
+    } else {
+      const project = state.projects.find((p) => p.id === item.projectId)
+      if (!project || project.type !== state.activeProjectType) return
+    }
+    ;(item.tags || []).forEach((t) => tags.add(t))
+  })
+  return Array.from(tags).sort()
+}
+
 const archivedItems = computed(() =>
   state.items.filter((item) => isArchivedDone(item) && matchesActiveFilters(item)),
 )
@@ -104,5 +120,6 @@ export function useBacklogStore() {
     visibleBoardItems,
     archivedItems,
     buildItemPrompt,
+    getTagsForProject,
   }
 }

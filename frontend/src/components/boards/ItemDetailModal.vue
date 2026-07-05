@@ -150,7 +150,7 @@ function save() {
 
           <div class="if-field">
             <div class="if-label">Tags (comma-separated)</div>
-            <TagInput v-model="form.tagsText" />
+            <TagInput v-model="form.tagsText" :project-id="props.item?.projectId" />
           </div>
 
           <div class="if-field">

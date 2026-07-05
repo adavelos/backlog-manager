@@ -11,7 +11,7 @@ import { useBacklogStore } from '@/composables/useBacklogStore'
 import { useModal } from '@/composables/useModal'
 import * as itemsService from '@/services/items.service'
 
-const { state, syncMutation, generateId, visibleBoardItems, archivedItems } = useBacklogStore()
+const { state, syncMutation, generateId, visibleBoardItems, archivedItems, getTagsForProject } = useBacklogStore()
 const { showConfirm, showPrompt } = useModal()
 const route = useRoute()
 const router = useRouter()
@@ -92,11 +92,7 @@ const scopeProjects = computed(() =>
     .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0)),
 )
 
-const allTags = computed(() => {
-  const tags = new Set()
-  state.items.forEach((item) => (item.tags || []).forEach((t) => tags.add(t)))
-  return Array.from(tags).sort()
-})
+const allTags = computed(() => getTagsForProject(state.currentProjectId))
 
 function selectProject(id) {
   state.currentProjectId = id

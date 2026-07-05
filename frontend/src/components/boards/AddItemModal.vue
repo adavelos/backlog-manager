@@ -138,7 +138,7 @@ function create() {
           </div>
           <div class="if-field">
             <div class="if-label">Tags (comma-separated)</div>
-            <TagInput v-model="form.tagsText" />
+            <TagInput v-model="form.tagsText" :project-id="form.projectId" />
           </div>
           <div class="if-field">
             <div class="if-label">Prompt</div>

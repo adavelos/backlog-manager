@@ -3,17 +3,16 @@ import { computed, ref } from 'vue'
 
 import { useBacklogStore } from '@/composables/useBacklogStore'
 
-const props = defineProps({ modelValue: { type: String, default: '' } })
+const props = defineProps({
+  modelValue: { type: String, default: '' },
+  projectId: { type: String, default: null },
+})
 const emit = defineEmits(['update:modelValue'])
 
-const { state } = useBacklogStore()
+const { getTagsForProject } = useBacklogStore()
 const showSuggestions = ref(false)
 
-const allTags = computed(() => {
-  const tags = new Set()
-  state.items.forEach((item) => (item.tags || []).forEach((t) => tags.add(t)))
-  return Array.from(tags).sort()
-})
+const allTags = computed(() => getTagsForProject(props.projectId))
 
 const lastSegment = computed(() => {
   const parts = props.modelValue.split(',')
