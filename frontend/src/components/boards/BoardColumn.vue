@@ -14,6 +14,11 @@ const PRIORITIES = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']
 
 const sortedItems = computed(() =>
   props.items.slice().sort((a, b) => {
+    // If either has a non-zero sortOrder, use it for ordering
+    const aSort = a.sortOrder || 0
+    const bSort = b.sortOrder || 0
+    if ((aSort !== 0 || bSort !== 0) && aSort !== bSort) return aSort - bSort
+    // Otherwise sort by priority, then updatedAt
     const pA = PRIORITIES.indexOf(a.priority)
     const pB = PRIORITIES.indexOf(b.priority)
     if (pA !== pB) return pB - pA
