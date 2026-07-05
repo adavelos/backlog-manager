@@ -330,6 +330,13 @@
   letter-spacing: 0.2px;
 }
 
+/* --- Priority separator ---------------------------------------------- */
+.priority-separator {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--border-light), transparent);
+  margin: 6px 0 8px 0;
+}
+
 /* --- Archive panel ---------------------------------------------- */
 .archive-panel {
   flex: 1;

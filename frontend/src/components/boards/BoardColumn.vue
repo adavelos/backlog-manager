@@ -62,6 +62,13 @@ function onDrop(e) {
     if (draggedFromOtherColumn) emit('drop', draggedFromOtherColumn)
   }
 }
+
+function shouldShowSeparator(index) {
+  if (index === 0 || index >= sortedItems.value.length - 1) return false
+  const currentPri = (sortedItems.value[index].priority || '').toUpperCase()
+  const nextPri = (sortedItems.value[index + 1].priority || '').toUpperCase()
+  return currentPri !== nextPri
+}
 </script>
 
 <template>
@@ -89,7 +96,10 @@ function onDrop(e) {
       @dragleave="dragOver = false"
       @drop="onDrop"
     >
-      <ItemCard v-for="item in sortedItems" :key="item.id" :item="item" @open="emit('open', $event)" />
+      <template v-for="(item, index) in sortedItems" :key="item.id">
+        <ItemCard :item="item" @open="emit('open', $event)" />
+        <div v-if="shouldShowSeparator(index)" class="priority-separator" />
+      </template>
     </div>
   </div>
 </template>
