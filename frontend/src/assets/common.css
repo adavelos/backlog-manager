@@ -102,12 +102,13 @@ body {
 /* --- Shell ------------------------------------------------------ */
 .app-shell {
   max-width: 100%;
-  min-height: 100vh;
+  height: 100vh;
   background: var(--bg-shell);
   box-shadow: 0 0 0 1px rgba(255,255,255,0.05), var(--shadow-xl);
   display: flex;
   flex-direction: column;
   position: relative;
+  overflow: hidden;
 }
 
 /* --- Header ----------------------------------------------------- */

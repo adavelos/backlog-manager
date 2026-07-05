@@ -403,8 +403,7 @@ function createItem(payload) {
 </script>
 
 <template>
-  <div class="boards-container-wrapper">
-    <div class="filters-panel">
+  <div class="filters-panel">
     <div class="filter-row">
       <div class="filter-label">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -602,8 +601,6 @@ function createItem(payload) {
         </div>
       </template>
     </div>
-  </div>
-
   </div>
 
   <ItemDetailModal :item="openItem" @close="closeItemDetail" @save="saveItemDetail" @delete="deleteItemDetail" />

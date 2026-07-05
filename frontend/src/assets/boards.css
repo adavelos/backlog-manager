@@ -2,17 +2,9 @@
    Backlog Manager — Boards-specific Styles
    ============================================ */
 
-/* --- Page Container --------------------------------------------- */
-.boards-container-wrapper {
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  flex: 1;
-}
-
 /* --- Filters Panel ---------------------------------------------- */
 .filters-panel {
-  padding: 8px 28px;
+  padding: 14px 28px 10px;
   border-bottom: 1px solid var(--border-light);
   background: var(--bg-surface);
   position: relative;
@@ -24,7 +16,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
   flex-wrap: wrap;
 }
 
@@ -37,9 +29,9 @@
 .search-input-wrapper {
   display: flex;
   align-items: center;
-  gap: 6px;
-  flex: 0 1 280px;
-  padding: 4px 10px;
+  gap: 8px;
+  flex: 0 1 300px;
+  padding: 6px 12px;
   border-radius: var(--radius-md);
   border: 1px solid var(--border-light);
   background: var(--bg-surface);
@@ -55,7 +47,7 @@
   flex: 1;
   background: transparent;
   border: none;
-  font-size: 11px;
+  font-size: 12px;
   font-family: var(--font);
   color: var(--text-primary);
   outline: none;
