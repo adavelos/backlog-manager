@@ -392,7 +392,7 @@ function createItem(payload) {
     createdAt: Date.now(),
     updatedAt: Date.now(),
     completedAt: null,
-    subitems: [],
+    subitems: payload.subitems,
   }
   state.items.push(item)
   closeAddItem()

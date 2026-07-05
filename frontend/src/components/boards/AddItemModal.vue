@@ -4,6 +4,7 @@ import { computed, reactive, watch } from 'vue'
 import PriorityRadios from './PriorityRadios.vue'
 import TypeRadios from './TypeRadios.vue'
 import TagInput from './TagInput.vue'
+import SubitemsEditor from './SubitemsEditor.vue'
 import { useBacklogStore } from '@/composables/useBacklogStore'
 
 const props = defineProps({
@@ -24,6 +25,7 @@ const form = reactive({
   tagsText: '',
   prompt: '',
   filesText: '',
+  subitems: [],
 })
 
 const filteredProjects = computed(() =>
@@ -54,6 +56,7 @@ watch(
     form.tagsText = ''
     form.prompt = ''
     form.filesText = ''
+    form.subitems = []
     const activeRelease = releasesForProject.value.find((r) => r.state === 'ACTIVE')
     if (activeRelease) form.releaseId = activeRelease.id
   },
@@ -87,6 +90,7 @@ function create() {
     analysis: form.analysis.trim(),
     prompt: form.prompt.trim(),
     filesAffected: splitList(form.filesText),
+    subitems: form.subitems,
   })
 }
 </script>
@@ -143,6 +147,13 @@ function create() {
           <div class="if-field">
             <div class="if-label">Files affected (comma-separated)</div>
             <input v-model="form.filesText" class="if-input" type="text" placeholder="e.g. src/main.ts, src/utils.ts" />
+          </div>
+          <div class="if-field">
+            <div class="if-label">
+              Subitems
+              <span style="font-weight: 400; color: var(--text-muted); font-size: 10px">(check to mark done, click × to delete)</span>
+            </div>
+            <SubitemsEditor v-model="form.subitems" />
           </div>
         </div>
       </div>
