@@ -20,6 +20,7 @@ const view = ref('state') // "state" | "release"
 const quickEditMode = ref(false)
 const showArchivePanel = ref(false)
 const activePriorities = ref(new Set(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']))
+const selectedReleaseIds = ref(new Set()) // filter by release; updated when project changes
 const openItemId = ref(null)
 const addItemTargetState = ref(null)
 
@@ -32,6 +33,10 @@ onMounted(() => {
   if (q.priorities) {
     const parsed = new Set(String(q.priorities).split(',').filter(Boolean))
     if (parsed.size > 0) activePriorities.value = parsed
+  }
+  if (q.releases) {
+    const parsed = new Set(String(q.releases).split(',').filter(Boolean))
+    if (parsed.size > 0) selectedReleaseIds.value = parsed
   }
   if (q.qe) quickEditMode.value = true
   if (q.archive) showArchivePanel.value = true
@@ -47,6 +52,11 @@ function syncUrl() {
   if (state.activeTags.size > 0) query.tags = Array.from(state.activeTags).join(',')
   if (activePriorities.value.size > 0 && activePriorities.value.size < 4) {
     query.priorities = Array.from(activePriorities.value).join(',')
+  }
+  const currentProjectReleases = currentProject.value?.releases || []
+  const allReleaseCount = currentProjectReleases.length + 1 // +1 for NO_RELEASE
+  if (selectedReleaseIds.value.size > 0 && selectedReleaseIds.value.size < allReleaseCount) {
+    query.releases = Array.from(selectedReleaseIds.value).join(',')
   }
   if (quickEditMode.value) query.qe = '1'
   if (showArchivePanel.value) query.archive = '1'
@@ -88,6 +98,25 @@ const allTags = computed(() => {
 
 function selectProject(id) {
   state.currentProjectId = id
+  selectedReleaseIds.value.clear() // reset release filter when project changes
+  syncUrl()
+}
+
+function toggleReleaseFilter(releaseId) {
+  if (selectedReleaseIds.value.has(releaseId)) selectedReleaseIds.value.delete(releaseId)
+  else selectedReleaseIds.value.add(releaseId)
+  syncUrl()
+}
+
+function toggleAllReleases() {
+  const currentProjectReleases = currentProject.value?.releases || []
+  if (selectedReleaseIds.value.size === 0) {
+    // Select all: include backlog + all releases
+    selectedReleaseIds.value = new Set(['NO_RELEASE', ...currentProjectReleases.map(r => r.id)])
+  } else {
+    // Deselect all
+    selectedReleaseIds.value.clear()
+  }
   syncUrl()
 }
 
@@ -122,6 +151,14 @@ const activeReleases = computed(() =>
     : [],
 )
 
+// Filter items by selected releases (if any are selected for current project)
+const releaseFilteredItems = computed(() => {
+  if (state.currentProjectId === 'ALL' || selectedReleaseIds.value.size === 0) {
+    return visibleBoardItems.value
+  }
+  return visibleBoardItems.value.filter((i) => selectedReleaseIds.value.has(i.releaseId || 'NO_RELEASE'))
+})
+
 // --- Board columns (state view) ---
 
 const STATES = ['BACKLOG', 'TODO', 'ONGOING', 'DONE']
@@ -130,7 +167,7 @@ const stateColumns = computed(() =>
   STATES.map((s) => ({
     id: s,
     label: s,
-    items: visibleBoardItems.value.filter((i) => i.state === s && activePriorities.value.has((i.priority || '').toUpperCase())),
+    items: releaseFilteredItems.value.filter((i) => i.state === s && activePriorities.value.has((i.priority || '').toUpperCase())),
   })),
 )
 
@@ -141,7 +178,7 @@ const releaseColumns = computed(() => {
   const cols = [{ id: 'NO_RELEASE', label: 'BACKLOG (no release)' }, ...activeReleases.value.map((r) => ({ id: r.id, label: r.name }))]
   return cols.map((c) => ({
     ...c,
-    items: visibleBoardItems.value.filter(
+    items: releaseFilteredItems.value.filter(
       (i) => (i.releaseId || 'NO_RELEASE') === c.id && activePriorities.value.has((i.priority || '').toUpperCase()),
     ),
   }))
@@ -366,6 +403,41 @@ function createItem(payload) {
           {{ p.name }}
         </button>
       </div>
+
+      <!-- Releases filter for selected project -->
+      <template v-if="state.currentProjectId !== 'ALL' && currentProject && currentProject.releases">
+        <div class="filter-label">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+          </svg>
+          <span>Releases</span>
+        </div>
+        <div class="chip-bar">
+          <button
+            class="chip"
+            :class="{ active: selectedReleaseIds.size === 0 }"
+            @click="toggleAllReleases"
+          >
+            All
+          </button>
+          <button
+            class="chip"
+            :class="{ active: selectedReleaseIds.has('NO_RELEASE') }"
+            @click="toggleReleaseFilter('NO_RELEASE')"
+          >
+            Backlog (no release)
+          </button>
+          <button
+            v-for="r in currentProject.releases"
+            :key="r.id"
+            class="chip"
+            :class="{ active: selectedReleaseIds.has(r.id) }"
+            @click="toggleReleaseFilter(r.id)"
+          >
+            {{ r.name }}
+          </button>
+        </div>
+      </template>
     </div>
 
     <div class="filter-row">
