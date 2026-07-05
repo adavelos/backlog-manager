@@ -29,7 +29,10 @@ onMounted(() => {
   if (q.project) state.currentProjectId = q.project
   if (q.type) state.activeProjectType = q.type
   if (q.tags) state.activeTags = new Set(String(q.tags).split(',').filter(Boolean))
-  if (q.priorities) activePriorities.value = new Set(String(q.priorities).split(',').filter(Boolean))
+  if (q.priorities) {
+    const parsed = new Set(String(q.priorities).split(',').filter(Boolean))
+    if (parsed.size > 0) activePriorities.value = parsed
+  }
   if (q.qe) quickEditMode.value = true
   if (q.archive) showArchivePanel.value = true
 })
@@ -400,12 +403,12 @@ function createItem(payload) {
           <button class="qe-toggle-button" :class="{ active: !quickEditMode }" @click="setQuickEdit(false)">Board</button>
           <button class="qe-toggle-button" :class="{ active: quickEditMode }" @click="setQuickEdit(true)">Quick Edit</button>
         </div>
-        <div class="chip-bar">
+        <div class="view-buttons">
           <button
             v-for="p in ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW']"
             :key="p"
-            class="chip"
-            :class="{ active: activePriorities.has(p), [`priority-${p}`]: true }"
+            class="view-button"
+            :class="{ active: activePriorities.has(p) }"
             @click="togglePriority(p)"
           >
             {{ p }}
