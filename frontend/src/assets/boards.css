@@ -21,6 +21,59 @@
 
 .filter-row:last-child { margin-bottom: 0 }
 
+.search-row {
+  gap: 8px;
+}
+
+.search-input-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 1 300px;
+  padding: 6px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-light);
+  background: var(--bg-surface);
+  color: var(--text-muted);
+}
+
+.search-input-wrapper svg {
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+.search-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  font-size: 12px;
+  font-family: var(--font);
+  color: var(--text-primary);
+  outline: none;
+  padding: 0;
+}
+
+.search-input::placeholder {
+  color: var(--text-muted);
+}
+
+.search-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  user-select: none;
+}
+
+.search-checkbox input {
+  cursor: pointer;
+  width: 14px;
+  height: 14px;
+  accent-color: var(--indigo-500);
+}
+
 .filter-label {
   font-size: 12px;
   font-weight: 600;

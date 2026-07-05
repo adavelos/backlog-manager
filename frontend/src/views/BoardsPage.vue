@@ -21,6 +21,8 @@ const quickEditMode = ref(false)
 const showArchivePanel = ref(false)
 const activePriorities = ref(new Set(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']))
 const selectedReleaseIds = ref(new Set()) // filter by release; updated when project changes
+const searchQuery = ref('')
+const searchAllFields = ref(false)
 const openItemId = ref(null)
 const addItemTargetState = ref(null)
 
@@ -159,6 +161,27 @@ const releaseFilteredItems = computed(() => {
   return visibleBoardItems.value.filter((i) => selectedReleaseIds.value.has(i.releaseId || 'NO_RELEASE'))
 })
 
+// Filter items by search query
+const searchFilteredItems = computed(() => {
+  if (!searchQuery.value.trim()) return releaseFilteredItems.value
+  const q = searchQuery.value.toLowerCase()
+  return releaseFilteredItems.value.filter((i) => {
+    if (searchAllFields.value) {
+      // Search across title, tags, analysis, prompt, report
+      return (
+        i.title.toLowerCase().includes(q) ||
+        (i.tags || []).some(t => t.toLowerCase().includes(q)) ||
+        (i.analysis || '').toLowerCase().includes(q) ||
+        (i.prompt || '').toLowerCase().includes(q) ||
+        (i.report || '').toLowerCase().includes(q)
+      )
+    } else {
+      // Search only in title
+      return i.title.toLowerCase().includes(q)
+    }
+  })
+})
+
 // --- Board columns (state view) ---
 
 const STATES = ['BACKLOG', 'TODO', 'ONGOING', 'DONE']
@@ -167,7 +190,7 @@ const stateColumns = computed(() =>
   STATES.map((s) => ({
     id: s,
     label: s,
-    items: releaseFilteredItems.value.filter((i) => i.state === s && activePriorities.value.has((i.priority || '').toUpperCase())),
+    items: searchFilteredItems.value.filter((i) => i.state === s && activePriorities.value.has((i.priority || '').toUpperCase())),
   })),
 )
 
@@ -178,7 +201,7 @@ const releaseColumns = computed(() => {
   const cols = [{ id: 'NO_RELEASE', label: 'BACKLOG (no release)' }, ...activeReleases.value.map((r) => ({ id: r.id, label: r.name }))]
   return cols.map((c) => ({
     ...c,
-    items: releaseFilteredItems.value.filter(
+    items: searchFilteredItems.value.filter(
       (i) => (i.releaseId || 'NO_RELEASE') === c.id && activePriorities.value.has((i.priority || '').toUpperCase()),
     ),
   }))
@@ -500,6 +523,26 @@ function createItem(payload) {
       <label class="archive-toggle">
         <input type="checkbox" :checked="showArchivePanel" @change="toggleArchive" />
         <span>Archive panel</span>
+      </label>
+    </div>
+
+    <!-- Quick search row -->
+    <div class="filter-row search-row">
+      <div class="search-input-wrapper">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8" />
+          <path d="m21 21-4.35-4.35" />
+        </svg>
+        <input
+          v-model="searchQuery"
+          type="text"
+          placeholder="Search items..."
+          class="search-input"
+        />
+      </div>
+      <label class="search-checkbox">
+        <input v-model="searchAllFields" type="checkbox" />
+        <span>All fields</span>
       </label>
     </div>
   </div>
