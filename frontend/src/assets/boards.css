@@ -4,18 +4,20 @@
 
 /* --- Filters Panel ---------------------------------------------- */
 .filters-panel {
-  padding: 14px 28px 10px;
+  padding: 10px 28px 8px;
   border-bottom: 1px solid var(--border-light);
   background: var(--bg-surface);
   position: relative;
   z-index: 5;
+  overflow-y: auto;
+  max-height: 50vh;
 }
 
 .filter-row {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
   flex-wrap: wrap;
 }
 
@@ -28,9 +30,9 @@
 .search-input-wrapper {
   display: flex;
   align-items: center;
-  gap: 8px;
-  flex: 0 1 300px;
-  padding: 6px 12px;
+  gap: 6px;
+  flex: 0 1 280px;
+  padding: 4px 10px;
   border-radius: var(--radius-md);
   border: 1px solid var(--border-light);
   background: var(--bg-surface);
@@ -46,7 +48,7 @@
   flex: 1;
   background: transparent;
   border: none;
-  font-size: 12px;
+  font-size: 11px;
   font-family: var(--font);
   color: var(--text-primary);
   outline: none;
