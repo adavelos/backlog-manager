@@ -8,7 +8,7 @@ const props = defineProps({
   items: { type: Array, required: true },
   showAddButton: { type: Boolean, default: false },
 })
-const emit = defineEmits(['drop', 'add', 'open'])
+const emit = defineEmits(['drop', 'drop-reorder', 'add', 'open'])
 
 const PRIORITIES = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']
 
@@ -32,8 +32,26 @@ function onDragOver(e) {
 function onDrop(e) {
   e.preventDefault()
   dragOver.value = false
-  const itemId = e.dataTransfer.getData('text/plain')
-  if (itemId) emit('drop', itemId)
+  const draggedItemId = e.dataTransfer.getData('text/plain')
+  if (!draggedItemId) return
+
+  // Check if dropped on an item card (for reordering within column)
+  const targetCard = e.target.closest('.item')
+  const targetItemId = targetCard?.dataset.itemId
+
+  const draggedIsInColumn = props.items.some(i => i.id === draggedItemId)
+  const targetIsInColumn = targetItemId && props.items.some(i => i.id === targetItemId)
+
+  if (draggedIsInColumn && targetIsInColumn && targetItemId !== draggedItemId) {
+    // Reordering within the same column
+    emit('drop-reorder', { draggedItemId, targetItemId, sortedItems: sortedItems.value })
+  } else if (draggedIsInColumn) {
+    // Dropped on empty space in the same column or on self - no op
+    return
+  } else {
+    // Moving to a different column
+    emit('drop', draggedItemId)
+  }
 }
 </script>
 

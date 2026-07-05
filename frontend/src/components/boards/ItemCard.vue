@@ -25,7 +25,7 @@ function onDragStart(e) {
 </script>
 
 <template>
-  <div class="item" draggable="true" @click.stop="emit('open', item.id)" @dragstart="onDragStart">
+  <div class="item" :data-item-id="item.id" draggable="true" @click.stop="emit('open', item.id)" @dragstart="onDragStart">
     <div class="item-title">
       <span class="item-title-text">{{ item.title }}</span>
       <button class="item-prompt-btn" title="Copy AI prompt to clipboard" @click="copyPrompt">

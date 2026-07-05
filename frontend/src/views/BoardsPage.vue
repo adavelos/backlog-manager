@@ -180,23 +180,29 @@ function computeSortOrder(prevItem, nextItem) {
   return (prev + next) / 2
 }
 
-function onDropReorder({ draggedItemId, targetItemId }) {
+function onDropReorder({ draggedItemId, targetItemId, sortedItems }) {
   const draggedItem = state.items.find((i) => i.id === draggedItemId)
   const targetItem = state.items.find((i) => i.id === targetItemId)
   if (!draggedItem || !targetItem) return
-  const fromActual = state.items.indexOf(draggedItem)
-  const toActual = state.items.indexOf(targetItem)
-  if (fromActual < 0 || toActual < 0) return
-  const [moved] = state.items.splice(fromActual, 1)
-  const adjustedTo = state.items.indexOf(targetItem)
-  state.items.splice(adjustedTo, 0, moved)
 
-  const movedIdx = state.items.indexOf(moved)
-  const prevNeighbor = state.items[movedIdx - 1] || null
-  const nextNeighbor = state.items[movedIdx + 1] || null
-  moved.sortOrder = computeSortOrder(prevNeighbor, nextNeighbor)
+  // Use the provided sorted items (from the column) to determine neighbors
+  const itemsToConsider = sortedItems || state.items
+  const draggedIdx = itemsToConsider.findIndex((i) => i.id === draggedItemId)
+  const targetIdx = itemsToConsider.findIndex((i) => i.id === targetItemId)
+  if (draggedIdx < 0 || targetIdx < 0) return
 
-  syncMutation(() => itemsService.updateItem(moved.id, { sortOrder: moved.sortOrder }), {
+  // Simulate moving dragged item to position of target
+  const reordered = itemsToConsider.filter((i) => i.id !== draggedItemId)
+  const insertPos = reordered.findIndex((i) => i.id === targetItemId)
+  reordered.splice(insertPos, 0, draggedItem)
+
+  // Find neighbors in the reordered list
+  const movedIdx = reordered.indexOf(draggedItem)
+  const prevNeighbor = reordered[movedIdx - 1] || null
+  const nextNeighbor = reordered[movedIdx + 1] || null
+  draggedItem.sortOrder = computeSortOrder(prevNeighbor, nextNeighbor)
+
+  syncMutation(() => itemsService.updateItem(draggedItem.id, { sortOrder: draggedItem.sortOrder }), {
     errorMessage: 'Failed to reorder item',
   })
 }
@@ -393,6 +399,7 @@ function createItem(payload) {
               :show-add-button="true"
               @add="addItem(col.id)"
               @drop="onDropToStateColumn(col.id, $event)"
+              @drop-reorder="onDropReorder"
               @open="openItemDetail"
             />
           </template>
@@ -406,6 +413,7 @@ function createItem(payload) {
               :label="col.label"
               :items="col.items"
               @drop="onDropToReleaseColumn(col.id, $event)"
+              @drop-reorder="onDropReorder"
               @open="openItemDetail"
             />
           </template>
