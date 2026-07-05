@@ -59,6 +59,17 @@ function togglePriority(priority) {
   syncUrl()
 }
 
+function toggleAllPriorities() {
+  if (activePriorities.value.size === 4) {
+    // If all are selected, deselect all
+    activePriorities.value.clear()
+  } else {
+    // Otherwise select all
+    activePriorities.value = new Set(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'])
+  }
+  syncUrl()
+}
+
 const openItem = computed(() => (openItemId.value ? state.items.find((i) => i.id === openItemId.value) : null))
 
 // --- Filter chips ---
@@ -404,6 +415,13 @@ function createItem(payload) {
           <button class="qe-toggle-button" :class="{ active: quickEditMode }" @click="setQuickEdit(true)">Quick Edit</button>
         </div>
         <div class="view-buttons">
+          <button
+            class="view-button"
+            :class="{ active: activePriorities.size === 4 }"
+            @click="toggleAllPriorities"
+          >
+            All
+          </button>
           <button
             v-for="p in ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW']"
             :key="p"
