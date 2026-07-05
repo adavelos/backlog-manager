@@ -199,7 +199,12 @@ function onDropReorder({ draggedItemId, targetItemId, sortedItems }) {
   // Simulate moving dragged item to position of target
   const reordered = itemsToConsider.filter((i) => i.id !== draggedItemId)
   const insertPos = reordered.findIndex((i) => i.id === targetItemId)
-  reordered.splice(insertPos, 0, draggedItem)
+
+  // Determine insertion direction: if dragging downwards, insert after; otherwise before
+  const isSortedIdxDraggedBeforeTarget = draggedIdx < targetIdx
+  const adjustedInsertPos = isSortedIdxDraggedBeforeTarget ? insertPos + 1 : insertPos
+
+  reordered.splice(adjustedInsertPos, 0, draggedItem)
 
   // Find neighbors in the reordered list
   const movedIdx = reordered.indexOf(draggedItem)
