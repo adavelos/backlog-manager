@@ -1,5 +1,7 @@
 from typing import Literal
 
+from pydantic import field_validator
+
 from app.schemas.common import CamelModel
 
 ItemState = Literal["BACKLOG", "TODO", "ONGOING", "DONE"]
@@ -27,6 +29,11 @@ class ItemCreate(CamelModel):
     sort_order: float | None = None
     release_id: str | None = None
 
+    @field_validator('priority')
+    @classmethod
+    def normalize_priority(cls, v):
+        return v.upper() if v else v
+
 
 class ItemUpdate(CamelModel):
     title: str | None = None
@@ -41,6 +48,11 @@ class ItemUpdate(CamelModel):
     subitems: list[Subitem] | None = None
     sort_order: float | None = None
     release_id: str | None = None
+
+    @field_validator('priority')
+    @classmethod
+    def normalize_priority(cls, v):
+        return v.upper() if v else v
 
 
 class ItemOut(CamelModel):
