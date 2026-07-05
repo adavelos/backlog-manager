@@ -333,9 +333,9 @@
 
 /* --- Priority separator ---------------------------------------------- */
 .priority-separator {
-  height: 1px;
-  background: linear-gradient(90deg, transparent, var(--border-light), transparent);
-  margin: 6px 0 8px 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--slate-300), transparent);
+  margin: 8px 0 10px 0;
 }
 
 /* --- Archive panel ---------------------------------------------- */
