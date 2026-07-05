@@ -15,8 +15,8 @@ const PRIORITIES = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']
 const sortedItems = computed(() =>
   props.items.slice().sort((a, b) => {
     // First sort by priority (CRITICAL > HIGH > MEDIUM > LOW)
-    const pA = PRIORITIES.indexOf(a.priority)
-    const pB = PRIORITIES.indexOf(b.priority)
+    const pA = PRIORITIES.indexOf((a.priority || '').toUpperCase())
+    const pB = PRIORITIES.indexOf((b.priority || '').toUpperCase())
     if (pA !== pB) return pB - pA
     // Then sort by sortOrder within same priority
     const aSort = a.sortOrder || 0
@@ -50,7 +50,9 @@ function onDrop(e) {
 
   if (draggedItem && targetItem && targetItemId !== draggedItemId) {
     // Only allow reordering if both items have the same priority
-    if (draggedItem.priority === targetItem.priority) {
+    const draggedPri = (draggedItem.priority || '').toUpperCase()
+    const targetPri = (targetItem.priority || '').toUpperCase()
+    if (draggedPri === targetPri) {
       emit('drop-reorder', { draggedItemId, targetItemId, sortedItems: sortedItems.value })
     }
     // else: silently ignore drop on different priority (could add visual feedback here)

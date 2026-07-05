@@ -119,7 +119,7 @@ const stateColumns = computed(() =>
   STATES.map((s) => ({
     id: s,
     label: s,
-    items: visibleBoardItems.value.filter((i) => i.state === s && activePriorities.value.has(i.priority)),
+    items: visibleBoardItems.value.filter((i) => i.state === s && activePriorities.value.has((i.priority || '').toUpperCase())),
   })),
 )
 
@@ -131,7 +131,7 @@ const releaseColumns = computed(() => {
   return cols.map((c) => ({
     ...c,
     items: visibleBoardItems.value.filter(
-      (i) => (i.releaseId || 'NO_RELEASE') === c.id && activePriorities.value.has(i.priority),
+      (i) => (i.releaseId || 'NO_RELEASE') === c.id && activePriorities.value.has((i.priority || '').toUpperCase()),
     ),
   }))
 })
@@ -142,8 +142,8 @@ function sortByPriority(items) {
   const PRIORITIES = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']
   return items.slice().sort((a, b) => {
     // First sort by priority (CRITICAL > HIGH > MEDIUM > LOW)
-    const pA = PRIORITIES.indexOf(a.priority)
-    const pB = PRIORITIES.indexOf(b.priority)
+    const pA = PRIORITIES.indexOf((a.priority || '').toUpperCase())
+    const pB = PRIORITIES.indexOf((b.priority || '').toUpperCase())
     if (pA !== pB) return pB - pA
     // Then sort by sortOrder within same priority
     const aSort = a.sortOrder || 0

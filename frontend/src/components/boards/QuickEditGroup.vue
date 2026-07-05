@@ -85,8 +85,12 @@ function onDrop(e) {
     const draggedItem = props.group.items.find(i => i.id === draggedItemId)
     const targetItem = props.group.items.find(i => i.id === targetItemId)
     // Only allow reordering if both items have the same priority
-    if (draggedItem && targetItem && draggedItem.priority === targetItem.priority) {
-      emit('drop-reorder', { draggedItemId, targetItemId, groupId: props.group.id })
+    if (draggedItem && targetItem) {
+      const draggedPri = (draggedItem.priority || '').toUpperCase()
+      const targetPri = (targetItem.priority || '').toUpperCase()
+      if (draggedPri === targetPri) {
+        emit('drop-reorder', { draggedItemId, targetItemId, groupId: props.group.id })
+      }
     }
   } else if (!targetItemId) {
     emit('drop-move', { draggedItemId, groupId: props.group.id })
