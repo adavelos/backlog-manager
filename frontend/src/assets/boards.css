@@ -52,6 +52,11 @@
   gap: 16px;
 }
 
+.releases-filter {
+  flex: 0 1 auto;
+  margin-left: 4px;
+}
+
 .view-buttons {
   display: inline-flex;
   border-radius: var(--radius-full);

@@ -405,39 +405,31 @@ function createItem(payload) {
       </div>
 
       <!-- Releases filter for selected project -->
-      <template v-if="state.currentProjectId !== 'ALL' && currentProject && currentProject.releases">
-        <div class="filter-label">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-          </svg>
-          <span>Releases</span>
-        </div>
-        <div class="chip-bar">
-          <button
-            class="chip"
-            :class="{ active: selectedReleaseIds.size === 0 }"
-            @click="toggleAllReleases"
-          >
-            All
-          </button>
-          <button
-            class="chip"
-            :class="{ active: selectedReleaseIds.has('NO_RELEASE') }"
-            @click="toggleReleaseFilter('NO_RELEASE')"
-          >
-            Backlog (no release)
-          </button>
-          <button
-            v-for="r in currentProject.releases"
-            :key="r.id"
-            class="chip"
-            :class="{ active: selectedReleaseIds.has(r.id) }"
-            @click="toggleReleaseFilter(r.id)"
-          >
-            {{ r.name }}
-          </button>
-        </div>
-      </template>
+      <div v-if="state.currentProjectId !== 'ALL' && currentProject && currentProject.releases" class="chip-bar releases-filter">
+        <button
+          class="chip"
+          :class="{ active: selectedReleaseIds.size === 0 }"
+          @click="toggleAllReleases"
+        >
+          All releases
+        </button>
+        <button
+          class="chip"
+          :class="{ active: selectedReleaseIds.has('NO_RELEASE') }"
+          @click="toggleReleaseFilter('NO_RELEASE')"
+        >
+          Backlog
+        </button>
+        <button
+          v-for="r in currentProject.releases"
+          :key="r.id"
+          class="chip"
+          :class="{ active: selectedReleaseIds.has(r.id) }"
+          @click="toggleReleaseFilter(r.id)"
+        >
+          {{ r.name }}
+        </button>
+      </div>
     </div>
 
     <div class="filter-row">
