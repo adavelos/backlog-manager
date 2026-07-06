@@ -7,6 +7,14 @@ set -e
 ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
 BACKEND_DIR="$ROOT_DIR/backend"
 FRONTEND_DIR="$ROOT_DIR/frontend"
+
+# Load port configuration from .env
+if [ -f "$ROOT_DIR/.env" ]; then
+  set -a
+  source "$ROOT_DIR/.env"
+  set +a
+fi
+
 PORT="${PORT:-3000}"
 
 if ! command -v uv >/dev/null 2>&1; then

@@ -4,10 +4,19 @@
 # (one port, no separate dev server), use ./serve.sh instead.
 set -e
 
-BACKEND_DIR="$(dirname "$0")/backend"
-FRONTEND_DIR="$(dirname "$0")/frontend"
-BACKEND_PORT="${BACKLOG_BACKEND_PORT:-8000}"
-FRONTEND_PORT="${BACKLOG_FRONTEND_PORT:-5174}"
+SCRIPT_DIR="$(dirname "$0")"
+BACKEND_DIR="$SCRIPT_DIR/backend"
+FRONTEND_DIR="$SCRIPT_DIR/frontend"
+
+# Load port configuration from .env
+if [ -f "$SCRIPT_DIR/.env" ]; then
+  set -a
+  source "$SCRIPT_DIR/.env"
+  set +a
+fi
+
+BACKEND_PORT="${BACKLOG_BACKEND_PORT:-8001}"
+FRONTEND_PORT="${BACKLOG_FRONTEND_PORT:-5173}"
 
 BACKEND_LOG=/tmp/backlog-manager-backend.log
 FRONTEND_LOG=/tmp/backlog-manager-frontend.log
@@ -20,7 +29,7 @@ if ! command -v uv >/dev/null 2>&1; then
 fi
 
 echo "Starting backend (FastAPI) on port $BACKEND_PORT..."
-(cd "$BACKEND_DIR" && nohup uv run uvicorn app.main:app --port "$BACKEND_PORT" > "$BACKEND_LOG" 2>&1 &
+(cd "$BACKEND_DIR" && BACKLOG_BACKEND_PORT="$BACKEND_PORT" nohup uv run uvicorn app.main:app --port "$BACKEND_PORT" > "$BACKEND_LOG" 2>&1 &
  echo $! > "$BACKEND_PID_FILE")
 
 if [ ! -d "$FRONTEND_DIR/node_modules" ]; then
@@ -29,7 +38,7 @@ if [ ! -d "$FRONTEND_DIR/node_modules" ]; then
 fi
 
 echo "Starting frontend (Vite) on port $FRONTEND_PORT..."
-(cd "$FRONTEND_DIR" && VITE_API_PROXY_TARGET="http://localhost:$BACKEND_PORT" \
+(cd "$FRONTEND_DIR" && export BACKLOG_BACKEND_PORT="$BACKEND_PORT" && \
   nohup npm run dev -- --port "$FRONTEND_PORT" > "$FRONTEND_LOG" 2>&1 &
  echo $! > "$FRONTEND_PID_FILE")
 
