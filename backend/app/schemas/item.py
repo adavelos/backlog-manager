@@ -1,6 +1,6 @@
 from typing import Literal
 
-from pydantic import field_validator
+from pydantic import Field, field_validator
 
 from app.schemas.common import CamelModel
 
@@ -16,7 +16,7 @@ class Subitem(CamelModel):
 class ItemCreate(CamelModel):
     id: str
     project_id: str
-    title: str
+    title: str = Field(min_length=1)
     state: ItemState = "BACKLOG"
     priority: str | None = None
     type: str | None = None
@@ -36,7 +36,7 @@ class ItemCreate(CamelModel):
 
 
 class ItemUpdate(CamelModel):
-    title: str | None = None
+    title: str | None = Field(default=None, min_length=1)
     state: ItemState | None = None
     priority: str | None = None
     type: str | None = None

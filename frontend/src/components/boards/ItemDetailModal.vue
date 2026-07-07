@@ -1,5 +1,5 @@
 <script setup>
-import { reactive, ref, watch } from 'vue'
+import { onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 
 import PriorityRadios from './PriorityRadios.vue'
 import TypeRadios from './TypeRadios.vue'
@@ -28,6 +28,13 @@ const form = reactive({
 })
 
 const titleInputRef = ref(null)
+
+function onKeydown(e) {
+  if (e.key === 'Escape') emit('close')
+}
+
+onMounted(() => window.addEventListener('keydown', onKeydown))
+onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 
 watch(
   () => props.item,
@@ -125,8 +132,8 @@ function save() {
           </div>
 
           <div class="if-field">
-            <div class="if-label">Title</div>
-            <input ref="titleInputRef" v-model="form.title" class="if-input" type="text" />
+              <div class="if-label">Title <span class="required-asterisk">*</span></div>
+            <input ref="titleInputRef" v-model="form.title" class="if-input" type="text" required @keydown.shift.enter.exact.prevent="save" />
           </div>
 
           <div class="if-field">
@@ -180,7 +187,7 @@ function save() {
       <div class="modal-footer">
         <button class="modal-btn modal-btn-cancel" @click="emit('close')">Cancel</button>
         <button class="modal-btn modal-btn-danger" @click="emit('delete', item)">Delete</button>
-        <button class="modal-btn modal-btn-primary" @click="save">Save</button>
+        <button class="modal-btn modal-btn-primary" :disabled="!form.title.trim()" @click="save">Save</button>
       </div>
     </div>
   </div>

@@ -1,8 +1,10 @@
 <script setup>
-import { reactive, watch } from 'vue'
+import { nextTick, reactive, ref, watch } from 'vue'
 
 const props = defineProps({ open: { type: Boolean, default: false } })
 const emit = defineEmits(['close', 'create'])
+
+const nameInputRef = ref(null)
 
 const form = reactive({ name: '', description: '' })
 
@@ -12,6 +14,7 @@ watch(
     if (open) {
       form.name = ''
       form.description = ''
+      nextTick(() => nameInputRef.value?.focus())
     }
   },
 )
@@ -31,7 +34,7 @@ function create() {
         <div class="item-form">
           <div class="if-field">
             <div class="if-label">Name</div>
-            <input v-model="form.name" class="if-input" type="text" placeholder="Project name" @keydown.enter="create" />
+            <input ref="nameInputRef" v-model="form.name" class="if-input" type="text" placeholder="Project name" @keydown.enter="create" />
           </div>
           <div class="if-field">
             <div class="if-label">Description</div>

@@ -721,6 +721,12 @@ body {
   background: var(--indigo-700);
 }
 
+.modal-btn-primary:disabled {
+  background: var(--slate-300);
+  color: var(--slate-500);
+  cursor: not-allowed;
+}
+
 .modal-btn-danger {
   background: var(--red-600);
   color: #ffffff;
@@ -728,6 +734,11 @@ body {
 
 .modal-btn-danger:hover {
   background: var(--red-700);
+}
+
+.required-asterisk {
+  color: var(--red-500);
+  font-weight: 700;
 }
 
 /* --- Utility ---------------------------------------------------- */

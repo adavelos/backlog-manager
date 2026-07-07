@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { marked } from 'marked'
 
@@ -23,6 +23,7 @@ const noteTitle = ref('')
 const noteContent = ref('')
 const showConvertModal = ref(false)
 const scratchpadInputRef = ref(null)
+const noteTitleInputRef = ref(null)
 
 onMounted(() => {
   const q = route.query
@@ -137,6 +138,7 @@ function createNoteForProject(projectId) {
   }
   state.notes.push(note)
   selectNote(note.id)
+  nextTick(() => noteTitleInputRef.value?.focus())
   syncMutation(() => notesService.createNote(note), { errorMessage: 'Failed to create note' })
 }
 
@@ -239,7 +241,7 @@ function doConvert({ projectId, title, keepScratchpad }) {
 
         <div v-else-if="selectedNote" class="notes-editor-content">
           <div class="notes-editor-header">
-            <input v-model="noteTitle" type="text" class="note-title-input" placeholder="Note title" @input="onTitleInput" />
+            <input ref="noteTitleInputRef" v-model="noteTitle" type="text" class="note-title-input" placeholder="Note title" @input="onTitleInput" />
             <span class="note-context-label">{{ noteProjectName }}</span>
             <button class="btn-inline" @click="saveNoteNow">Save</button>
             <button class="btn-inline" @click="deleteCurrentNote">Delete</button>

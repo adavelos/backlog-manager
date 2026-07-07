@@ -370,9 +370,8 @@ function closeAddItem() {
   addItemTargetState.value = null
 }
 
-function createItem(payload) {
-  const targetState = addItemTargetState.value
-  const item = {
+function createItemFromPayload(payload, targetState) {
+  return {
     id: 'item-' + generateId(),
     projectId: payload.projectId,
     releaseId: payload.releaseId,
@@ -390,8 +389,20 @@ function createItem(payload) {
     completedAt: null,
     subitems: payload.subitems,
   }
+}
+
+function createItem(payload) {
+  const item = createItemFromPayload(payload, addItemTargetState.value)
   state.items.push(item)
   closeAddItem()
+  syncMutation(() => itemsService.createItem(item), { errorMessage: 'Failed to create item' }).then((created) => {
+    if (created) item.sortOrder = created.sortOrder
+  })
+}
+
+function createItemAndNew(payload) {
+  const item = createItemFromPayload(payload, addItemTargetState.value)
+  state.items.push(item)
   syncMutation(() => itemsService.createItem(item), { errorMessage: 'Failed to create item' }).then((created) => {
     if (created) item.sortOrder = created.sortOrder
   })
@@ -600,5 +611,5 @@ function createItem(payload) {
   </div>
 
   <ItemDetailModal :item="openItem" @close="closeItemDetail" @save="saveItemDetail" @delete="deleteItemDetail" />
-  <AddItemModal :target-state="addItemTargetState" :default-project-id="state.currentProjectId" @close="closeAddItem" @create="createItem" />
+  <AddItemModal :target-state="addItemTargetState" :default-project-id="state.currentProjectId" @close="closeAddItem" @create="createItem" @create-and-new="createItemAndNew" />
 </template>

@@ -1,5 +1,5 @@
 <script setup>
-import { computed, reactive, watch } from 'vue'
+import { computed, nextTick, reactive, ref, watch } from 'vue'
 
 import PriorityRadios from './PriorityRadios.vue'
 import TypeRadios from './TypeRadios.vue'
@@ -11,9 +11,11 @@ const props = defineProps({
   targetState: { type: String, default: null },
   defaultProjectId: { type: String, default: null },
 })
-const emit = defineEmits(['close', 'create'])
+const emit = defineEmits(['close', 'create', 'create-and-new'])
 
 const { state } = useBacklogStore()
+
+const titleInputRef = ref(null)
 
 const form = reactive({
   projectId: null,
@@ -59,6 +61,7 @@ watch(
     form.subitems = []
     const activeRelease = releasesForProject.value.find((r) => r.state === 'ACTIVE')
     if (activeRelease) form.releaseId = activeRelease.id
+    nextTick(() => titleInputRef.value?.focus())
   },
 )
 
@@ -77,10 +80,10 @@ function splitList(text) {
     .filter(Boolean)
 }
 
-function create() {
+function buildPayload() {
   const title = form.title.trim()
-  if (!title) return
-  emit('create', {
+  if (!title) return null
+  return {
     projectId: form.projectId,
     releaseId: form.releaseId || null,
     title,
@@ -91,7 +94,32 @@ function create() {
     prompt: form.prompt.trim(),
     filesAffected: splitList(form.filesText),
     subitems: form.subitems,
-  })
+  }
+}
+
+function resetForm() {
+  form.title = ''
+  form.analysis = ''
+  form.priority = 'MEDIUM'
+  form.type = 'FEATURE'
+  form.tagsText = ''
+  form.prompt = ''
+  form.filesText = ''
+  form.subitems = []
+}
+
+function create() {
+  const payload = buildPayload()
+  if (!payload) return
+  emit('create', payload)
+}
+
+function saveAndNew() {
+  const payload = buildPayload()
+  if (!payload) return
+  emit('create-and-new', payload)
+  resetForm()
+  nextTick(() => titleInputRef.value?.focus())
 }
 </script>
 
@@ -117,8 +145,8 @@ function create() {
             </div>
           </div>
           <div class="if-field">
-            <div class="if-label">Title</div>
-            <input v-model="form.title" class="if-input" type="text" placeholder="What needs to be done?" @keydown.enter="create" />
+              <div class="if-label">Title <span class="required-asterisk">*</span></div>
+            <input ref="titleInputRef" v-model="form.title" class="if-input" type="text" placeholder="What needs to be done?" required @keydown.shift.enter.exact.prevent="create" @keydown.ctrl.shift.enter.prevent="saveAndNew" @keydown.esc="emit('close')" />
           </div>
           <div class="if-field">
             <div class="if-label">Analysis</div>
@@ -159,7 +187,8 @@ function create() {
       </div>
       <div class="modal-footer">
         <button class="modal-btn modal-btn-cancel" @click="emit('close')">Cancel</button>
-        <button class="modal-btn modal-btn-primary" @click="create">Create</button>
+        <button class="modal-btn modal-btn-primary" :disabled="!form.title.trim()" @click="saveAndNew">Create &amp; New</button>
+        <button class="modal-btn modal-btn-primary" :disabled="!form.title.trim()" @click="create">Create</button>
       </div>
     </div>
   </div>
