@@ -23,9 +23,16 @@ class ProjectRepository:
         return project
 
     def create(self, db: Session, data: ProjectCreate) -> Project:
+        existing = db.execute(select(Project).where(Project.key == data.key)).scalar_one_or_none()
+        if existing:
+            raise ConflictError(
+                f"Project key '{data.key}' is already in use", code="KEY_COLLISION"
+            )
+
         project = Project(
             id=data.id,
             name=data.name,
+            key=data.key,
             type=data.type,
             description=data.description,
             repo_path=data.repo_path,

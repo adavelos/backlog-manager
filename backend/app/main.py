@@ -39,7 +39,10 @@ def handle_not_found(_request: Request, exc: NotFoundError):
 
 @app.exception_handler(ConflictError)
 def handle_conflict(_request: Request, exc: ConflictError):
-    return JSONResponse(status_code=400, content={"status": "error", "message": str(exc)})
+    content: dict = {"status": "error", "message": str(exc)}
+    if exc.code:
+        content["code"] = exc.code
+    return JSONResponse(status_code=400, content=content)
 
 
 app.include_router(backlog.router)

@@ -31,6 +31,8 @@ class Item(Base):
     tags: Mapped[str | None] = mapped_column(Text, nullable=True)
     subitems: Mapped[str | None] = mapped_column(Text, nullable=True)
     sort_order: Mapped[float] = mapped_column("sortOrder", Float, nullable=False, default=0)
+    ticket_number: Mapped[int | None] = mapped_column("ticketNumber", Integer, nullable=True)
+    ticket_id: Mapped[str | None] = mapped_column("ticketId", String, nullable=True)
     completed_at: Mapped[int | None] = mapped_column("completedAt", Integer, nullable=True)
     release_id: Mapped[str | None] = mapped_column(
         "releaseId", String, ForeignKey("releases.id", ondelete="SET NULL"), nullable=True

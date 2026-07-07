@@ -396,7 +396,11 @@ function createItem(payload) {
   state.items.push(item)
   closeAddItem()
   syncMutation(() => itemsService.createItem(item), { errorMessage: 'Failed to create item' }).then((created) => {
-    if (created) item.sortOrder = created.sortOrder
+    if (created) {
+      item.sortOrder = created.sortOrder
+      item.ticketNumber = created.ticketNumber
+      item.ticketId = created.ticketId
+    }
   })
 }
 
@@ -404,7 +408,11 @@ function createItemAndNew(payload) {
   const item = createItemFromPayload(payload, addItemTargetState.value)
   state.items.push(item)
   syncMutation(() => itemsService.createItem(item), { errorMessage: 'Failed to create item' }).then((created) => {
-    if (created) item.sortOrder = created.sortOrder
+    if (created) {
+      item.sortOrder = created.sortOrder
+      item.ticketNumber = created.ticketNumber
+      item.ticketId = created.ticketId
+    }
   })
 }
 </script>

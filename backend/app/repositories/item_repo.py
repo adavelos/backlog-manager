@@ -1,6 +1,6 @@
 import json
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -29,6 +29,8 @@ def item_to_out(item: Item) -> ItemOut:
         tags=_loads(item.tags),
         subitems=_loads(item.subitems),
         sort_order=item.sort_order,
+        ticket_number=item.ticket_number,
+        ticket_id=item.ticket_id,
         completed_at=item.completed_at,
         release_id=item.release_id,
         created_at=item.created_at,
@@ -66,6 +68,21 @@ class ItemRepository:
             max_order = db.scalar(select(func.max(Item.sort_order)))
             sort_order = (max_order + 1) if max_order is not None else 0
 
+        # Atomic counter increment — no race conditions even under concurrent
+        # writes. SQLite serialises DML; UPDATE … RETURNING is supported
+        # since version 3.35.0 (2021‑03‑12).
+        result = db.execute(
+            text("UPDATE projects SET ticketCounter = ticketCounter + 1 WHERE id = :pid RETURNING ticketCounter, key"),
+            {"pid": data.project_id},
+        )
+        row = result.fetchone()
+        if row is None:
+            raise NotFoundError(f"Project {data.project_id!r} not found")
+        ticket_number = row[0]
+        project_key = row[1]
+        ticket_id = f"{project_key}-{ticket_number:04d}"
+        db.expire_all()
+
         item = Item(
             id=data.id,
             project_id=data.project_id,
@@ -80,6 +97,8 @@ class ItemRepository:
             tags=json.dumps(data.tags),
             subitems=json.dumps([s.model_dump(by_alias=True) for s in data.subitems]),
             sort_order=sort_order,
+            ticket_number=ticket_number,
+            ticket_id=ticket_id,
             release_id=data.release_id,
             completed_at=now_ms() if data.state == "DONE" else None,
         )

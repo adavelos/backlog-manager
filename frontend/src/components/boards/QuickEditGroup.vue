@@ -133,7 +133,7 @@ function onDrop(e) {
           @dragstart="onDragStart($event, item)"
           @dragend="draggingItemId = null"
         >
-          <td style="width: 5%"><span class="qe-row-handle">{{ rowIndex + 1 }}</span></td>
+          <td style="width: 5%"><span class="qe-row-handle">{{ item.ticketId || item.ticketNumber || rowIndex + 1 }}</span></td>
           <td
             style="width: 40%"
             class="qe-cell-editable"

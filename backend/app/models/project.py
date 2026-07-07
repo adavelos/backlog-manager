@@ -14,8 +14,10 @@ class Project(Base):
     id: Mapped[str] = mapped_column(String, primary_key=True)
     name: Mapped[str] = mapped_column(String, nullable=False)
     type: Mapped[str] = mapped_column(String, nullable=False)
+    key: Mapped[str] = mapped_column("key", String, nullable=False, default="PR")
     description: Mapped[str] = mapped_column(Text, nullable=False, default="")
     repo_path: Mapped[str] = mapped_column("repoPath", Text, nullable=False, default="")
+    ticket_counter: Mapped[int] = mapped_column("ticketCounter", Integer, nullable=False, default=0)
     sort_order: Mapped[float] = mapped_column("sortOrder", Float, nullable=False, default=0)
     created_at: Mapped[int] = mapped_column("createdAt", Integer, nullable=False, default=now_ms)
     updated_at: Mapped[int] = mapped_column(

@@ -1,5 +1,7 @@
 from typing import Literal
 
+from pydantic import Field
+
 from app.schemas.common import CamelModel
 from app.schemas.release import ReleaseOut
 
@@ -8,7 +10,8 @@ ProjectType = Literal["work", "argonath"]
 
 class ProjectCreate(CamelModel):
     id: str
-    name: str
+    name: str = Field(min_length=1)
+    key: str = Field(min_length=1, max_length=3, pattern=r'^[A-Z0-9]{1,3}$')
     type: ProjectType
     description: str = ""
     repo_path: str = ""
@@ -16,7 +19,7 @@ class ProjectCreate(CamelModel):
 
 
 class ProjectUpdate(CamelModel):
-    name: str | None = None
+    name: str | None = Field(default=None, min_length=1)
     type: ProjectType | None = None
     description: str | None = None
     repo_path: str | None = None
@@ -26,6 +29,7 @@ class ProjectUpdate(CamelModel):
 class ProjectOut(CamelModel):
     id: str
     name: str
+    key: str
     type: str
     description: str
     repo_path: str

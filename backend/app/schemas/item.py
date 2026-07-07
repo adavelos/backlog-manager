@@ -69,6 +69,8 @@ class ItemOut(CamelModel):
     tags: list[str]
     subitems: list[Subitem]
     sort_order: float
+    ticket_number: int | None = None
+    ticket_id: str | None = None
     completed_at: int | None
     release_id: str | None
     created_at: int

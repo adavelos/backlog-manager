@@ -32,7 +32,9 @@ function save() {
       <div class="modal-header">Edit project</div>
       <div class="modal-body">
         <div class="item-detail-form">
-          <div class="item-detail-id">{{ project.id }}</div>
+          <div class="item-detail-id">
+            <span class="project-key">[{{ project.key }}]</span>
+          </div>
           <div class="if-field">
             <div class="if-label">Name</div>
             <input v-model="form.name" class="if-input" type="text" />

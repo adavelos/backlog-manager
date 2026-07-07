@@ -77,11 +77,12 @@ function computeSortOrder(prevItem, nextItem) {
   return (prev + next) / 2
 }
 
-function createProject({ name, description }) {
+function createProject({ name, description, key }) {
   const maxOrder = scopeProjects.value.reduce((max, p) => Math.max(max, p.sortOrder || 0), 0)
   const project = {
     id: 'proj-' + generateId(),
     name,
+    key,
     description: description || '',
     type: state.activeProjectType,
     repoPath: '',
@@ -226,7 +227,7 @@ function reorderReleases(orderedIds) {
             </span>
             <span class="order-badge">{{ scopeProjects.indexOf(project) + 1 }}</span>
             <div class="manage-item-content">
-              <div class="manage-item-title">{{ project.name }}</div>
+              <div class="manage-item-title"><span class="project-key">[{{ project.key }}]</span> {{ project.name }}</div>
               <div v-if="project.description" class="manage-item-desc">{{ project.description }}</div>
             </div>
             <span v-if="project.type === 'argonath'" class="badge type-argonath">Argonath</span>

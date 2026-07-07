@@ -27,6 +27,8 @@ function onDragStart(e) {
 <template>
   <div class="item" :data-item-id="item.id" draggable="true" @click.stop="emit('open', item.id)" @dragstart="onDragStart">
     <div class="item-title">
+      <span v-if="item.ticketId" class="item-ticket">{{ item.ticketId }}</span>
+      <span v-else-if="item.ticketNumber" class="item-ticket">#{{ item.ticketNumber }}</span>
       <span class="item-title-text">{{ item.title }}</span>
       <button class="item-prompt-btn" title="Copy AI prompt to clipboard" @click="copyPrompt">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

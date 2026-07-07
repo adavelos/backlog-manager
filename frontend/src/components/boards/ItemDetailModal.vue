@@ -109,7 +109,7 @@ function save() {
       </div>
       <div class="modal-body">
         <div class="item-detail-form">
-          <div class="item-detail-id">{{ item.id }}</div>
+          <div class="item-detail-id">{{ item.ticketId || item.id }}</div>
 
           <div class="if-row if-project" style="gap: 8px; align-items: center">
             <span style="font-size: 11px; font-weight: 600; color: var(--text-muted)">{{ project()?.name || '—' }}</span>
