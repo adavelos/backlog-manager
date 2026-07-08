@@ -40,7 +40,7 @@ class ProjectRepository:
         )
         db.add(project)
         try:
-            db.flush()
+            db.commit()
         except IntegrityError as exc:
             raise ConflictError(str(exc.orig)) from exc
         db.refresh(project, attribute_names=["releases"])
@@ -51,7 +51,7 @@ class ProjectRepository:
         for field, value in data.model_dump(exclude_unset=True).items():
             setattr(project, field, value)
         try:
-            db.flush()
+            db.commit()
         except IntegrityError as exc:
             raise ConflictError(str(exc.orig)) from exc
         return project
@@ -59,7 +59,7 @@ class ProjectRepository:
     def delete(self, db: Session, project_id: str) -> None:
         project = self.get(db, project_id)
         db.delete(project)
-        db.flush()
+        db.commit()
 
 
 project_repo = ProjectRepository()

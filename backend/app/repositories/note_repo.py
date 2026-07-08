@@ -28,7 +28,7 @@ class NoteRepository:
         )
         db.add(note)
         try:
-            db.flush()
+            db.commit()
         except IntegrityError as exc:
             raise ConflictError(str(exc.orig)) from exc
         return note
@@ -38,7 +38,7 @@ class NoteRepository:
         for field, value in data.model_dump(exclude_unset=True).items():
             setattr(note, field, value)
         try:
-            db.flush()
+            db.commit()
         except IntegrityError as exc:
             raise ConflictError(str(exc.orig)) from exc
         return note
@@ -46,7 +46,7 @@ class NoteRepository:
     def delete(self, db: Session, note_id: str) -> None:
         note = self.get(db, note_id)
         db.delete(note)
-        db.flush()
+        db.commit()
 
 
 note_repo = NoteRepository()

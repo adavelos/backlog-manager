@@ -19,7 +19,7 @@ class ScratchpadRepository:
     def update(self, db: Session, type_: str, data: ScratchpadUpdate) -> Scratchpad:
         scratchpad = self.get(db, type_)
         scratchpad.content = data.content
-        db.flush()
+        db.commit()
         return scratchpad
 
 

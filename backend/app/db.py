@@ -13,10 +13,12 @@ class Base(DeclarativeBase):
 
 def create_engine_for(database_url: str):
     from sqlalchemy import create_engine
+    from sqlalchemy.pool import NullPool
 
     engine = create_engine(
         database_url,
         connect_args={"check_same_thread": False},
+        poolclass=NullPool,
     )
 
     @event.listens_for(engine, "connect")
