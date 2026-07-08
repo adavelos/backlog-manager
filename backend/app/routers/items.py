@@ -13,15 +13,33 @@ def list_items(
     project_id: str | None = Query(None, alias="projectId"),
     state: str | None = Query(None),
     release_id: str | None = Query(None, alias="releaseId"),
+    ticket_id: str | None = Query(None, alias="ticketId"),
     db: Session = Depends(get_db),
 ):
-    items = item_repo.list_filtered(db, project_id=project_id, state=state, release_id=release_id)
+    items = item_repo.list_filtered(
+        db, project_id=project_id, state=state, release_id=release_id, ticket_id=ticket_id
+    )
+    return [item_to_out(i) for i in items]
+
+
+@router.get("/candidates", response_model=list[ItemOut])
+def get_candidate_items(
+    project_id: str = Query(..., alias="projectId"),
+    limit: int = Query(10, ge=1, le=100),
+    db: Session = Depends(get_db),
+):
+    items = item_repo.get_candidates(db, project_id, limit)
     return [item_to_out(i) for i in items]
 
 
 @router.post("", response_model=ItemOut, status_code=status.HTTP_201_CREATED)
 def create_item(payload: ItemCreate, db: Session = Depends(get_db)):
     return item_to_out(item_repo.create(db, payload))
+
+
+@router.get("/{item_id}", response_model=ItemOut)
+def get_item(item_id: str, db: Session = Depends(get_db)):
+    return item_to_out(item_repo.get(db, item_id))
 
 
 @router.patch("/{item_id}", response_model=ItemOut)

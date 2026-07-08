@@ -4,8 +4,9 @@ from sqlalchemy import func, select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.domain.priority import priority_rank
 from app.errors import ConflictError, NotFoundError
-from app.models import Item
+from app.models import Item, Release
 from app.models.timestamps import now_ms
 from app.schemas.item import ItemCreate, ItemOut, ItemUpdate
 
@@ -45,6 +46,7 @@ class ItemRepository:
         project_id: str | None = None,
         state: str | None = None,
         release_id: str | None = None,
+        ticket_id: str | None = None,
     ) -> list[Item]:
         stmt = select(Item)
         if project_id is not None:
@@ -53,6 +55,8 @@ class ItemRepository:
             stmt = stmt.where(Item.state == state)
         if release_id is not None:
             stmt = stmt.where(Item.release_id == release_id)
+        if ticket_id is not None:
+            stmt = stmt.where(Item.ticket_id == ticket_id)
         stmt = stmt.order_by(Item.sort_order)
         return list(db.scalars(stmt))
 
@@ -61,6 +65,44 @@ class ItemRepository:
         if item is None:
             raise NotFoundError(f"Item {item_id!r} not found")
         return item
+
+    def get_candidates(self, db: Session, project_id: str, limit: int) -> list[Item]:
+        """Rank open items in a project by release tier, priority, state, recency.
+
+        Release tier: isDefault release (MAIN_ACTIVE, rank 0) > other ACTIVE
+        releases (OTHER_ACTIVE, rank 1) > PLANNED releases or no release
+        (FUTURE, rank 2). RELEASED releases are excluded entirely.
+        """
+        releases = list(db.scalars(select(Release).where(Release.project_id == project_id)))
+        release_tier: dict[str, int] = {}
+        excluded_release_ids: set[str] = set()
+        for r in releases:
+            if r.state == "RELEASED":
+                excluded_release_ids.add(r.id)
+            elif r.is_default:
+                release_tier[r.id] = 0
+            elif r.state == "ACTIVE":
+                release_tier[r.id] = 1
+            else:
+                release_tier[r.id] = 2
+
+        items = list(
+            db.scalars(
+                select(Item).where(
+                    Item.project_id == project_id, Item.state.in_(["TODO", "BACKLOG"])
+                )
+            )
+        )
+        items = [i for i in items if i.release_id not in excluded_release_ids]
+
+        state_rank = {"TODO": 0, "BACKLOG": 1}
+
+        def sort_key(item: Item):
+            tier = release_tier.get(item.release_id, 2) if item.release_id else 2
+            return (tier, priority_rank(item.priority), state_rank[item.state], item.created_at)
+
+        items.sort(key=sort_key)
+        return items[:limit]
 
     def create(self, db: Session, data: ItemCreate) -> Item:
         sort_order = data.sort_order
@@ -104,7 +146,7 @@ class ItemRepository:
         )
         db.add(item)
         try:
-            db.flush()
+            db.commit()
         except IntegrityError as exc:
             raise ConflictError(str(exc.orig)) from exc
         return item
@@ -129,7 +171,7 @@ class ItemRepository:
                 item.completed_at = None
 
         try:
-            db.flush()
+            db.commit()
         except IntegrityError as exc:
             raise ConflictError(str(exc.orig)) from exc
         return item
@@ -137,7 +179,7 @@ class ItemRepository:
     def delete(self, db: Session, item_id: str) -> None:
         item = self.get(db, item_id)
         db.delete(item)
-        db.flush()
+        db.commit()
 
 
 item_repo = ItemRepository()
