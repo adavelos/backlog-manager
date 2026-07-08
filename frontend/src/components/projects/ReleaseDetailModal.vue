@@ -4,7 +4,7 @@ import { reactive, watch } from 'vue'
 const props = defineProps({ release: { type: Object, default: null } })
 const emit = defineEmits(['close', 'save', 'delete'])
 
-const form = reactive({ name: '', state: 'PLANNED', description: '' })
+const form = reactive({ name: '', state: 'PLANNED', isDefault: false, description: '' })
 
 watch(
   () => props.release,
@@ -12,6 +12,7 @@ watch(
     if (!release) return
     form.name = release.name || ''
     form.state = release.state || 'PLANNED'
+    form.isDefault = release.isDefault || false
     form.description = release.description || ''
   },
   { immediate: true },
@@ -21,6 +22,7 @@ function save() {
   emit('save', {
     name: form.name.trim() || props.release.name,
     state: form.state,
+    isDefault: form.isDefault,
     description: form.description.trim(),
   })
 }
@@ -41,9 +43,15 @@ function save() {
             <div class="if-field" style="flex: 0.6">
               <div class="if-label">State</div>
               <select v-model="form.state" class="if-input if-select">
-                <option v-for="s in ['PLANNED', 'ACTIVE', 'ARCHIVED']" :key="s" :value="s">{{ s }}</option>
+                <option v-for="s in ['PLANNED', 'ACTIVE', 'RELEASED']" :key="s" :value="s">{{ s }}</option>
               </select>
             </div>
+          </div>
+          <div class="if-field">
+            <label class="if-label" style="display: flex; align-items: center; gap: 6px; cursor: pointer">
+              <input v-model="form.isDefault" type="checkbox" />
+              Set as default release
+            </label>
           </div>
           <div class="if-field">
             <div class="if-label">Description</div>

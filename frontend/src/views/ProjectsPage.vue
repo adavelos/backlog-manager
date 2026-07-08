@@ -77,7 +77,7 @@ function computeSortOrder(prevItem, nextItem) {
   return (prev + next) / 2
 }
 
-function createProject({ name, description, key }) {
+function createProject({ name, description, key, repoPath }) {
   const maxOrder = scopeProjects.value.reduce((max, p) => Math.max(max, p.sortOrder || 0), 0)
   const project = {
     id: 'proj-' + generateId(),
@@ -85,7 +85,7 @@ function createProject({ name, description, key }) {
     key,
     description: description || '',
     type: state.activeProjectType,
-    repoPath: '',
+    repoPath: repoPath || '',
     sortOrder: maxOrder + 1,
     releases: [],
   }
@@ -279,7 +279,10 @@ function reorderReleases(orderedIds) {
             </span>
             <span class="order-badge">{{ releases.indexOf(release) + 1 }}</span>
             <div class="manage-item-content">
-              <div class="manage-item-title">{{ release.name }}  {{ releaseStateGlyph(release) }}</div>
+              <div class="manage-item-title">
+                {{ release.name }}  {{ releaseStateGlyph(release) }}
+                <span v-if="release.isDefault" class="order-badge" title="Default release">default</span>
+              </div>
               <div v-if="release.description" class="manage-item-desc">{{ release.description }}</div>
             </div>
             <span class="manage-item-actions">

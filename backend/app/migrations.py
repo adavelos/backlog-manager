@@ -8,6 +8,12 @@ def _column_exists(cursor, table: str, column: str) -> bool:
     return any(col[1] == column for col in cursor.fetchall())
 
 
+def _has_check_constraint(cursor, table: str, marker: str) -> bool:
+    cursor.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name=?", (table,))
+    row = cursor.fetchone()
+    return bool(row and marker in row[0])
+
+
 def init_db(db_path: Path) -> None:
     """Create the database schema if it doesn't exist."""
     db_path.parent.mkdir(parents=True, exist_ok=True)
@@ -48,6 +54,7 @@ def init_db(db_path: Path) -> None:
                 projectId TEXT NOT NULL,
                 name TEXT NOT NULL,
                 state TEXT NOT NULL,
+                isDefault INTEGER NOT NULL DEFAULT 0,
                 description TEXT NOT NULL,
                 startDate INTEGER,
                 endDate INTEGER,
@@ -55,6 +62,7 @@ def init_db(db_path: Path) -> None:
                 sortOrder REAL NOT NULL,
                 createdAt INTEGER NOT NULL,
                 updatedAt INTEGER NOT NULL,
+                CHECK (state IN ('PLANNED', 'ACTIVE', 'RELEASED')),
                 FOREIGN KEY (projectId) REFERENCES projects(id) ON DELETE CASCADE
             );
 
@@ -109,6 +117,27 @@ def init_db(db_path: Path) -> None:
 
     if not _column_exists(cursor, "items", "ticketId"):
         cursor.execute("ALTER TABLE items ADD COLUMN ticketId TEXT")
+
+    if not _column_exists(cursor, "releases", "isDefault"):
+        cursor.execute("ALTER TABLE releases ADD COLUMN isDefault INTEGER NOT NULL DEFAULT 0")
+
+    # Constrain releases.state to the enum and fix the ARCHIVED->RELEASED bug
+    # (SQLite has no ALTER TABLE ADD CONSTRAINT; add a CHECK-constrained shadow
+    # column, backfill/normalize existing values, then swap it in).
+    if not _has_check_constraint(cursor, "releases", "CHECK (state IN"):
+        cursor.execute(
+            "ALTER TABLE releases ADD COLUMN state_new TEXT NOT NULL DEFAULT 'PLANNED' "
+            "CHECK (state_new IN ('PLANNED', 'ACTIVE', 'RELEASED'))"
+        )
+        cursor.execute("""
+            UPDATE releases SET state_new = CASE
+                WHEN state IN ('PLANNED', 'ACTIVE', 'RELEASED') THEN state
+                WHEN state = 'ARCHIVED' THEN 'RELEASED'
+                ELSE 'PLANNED'
+            END
+        """)
+        cursor.execute("ALTER TABLE releases DROP COLUMN state")
+        cursor.execute("ALTER TABLE releases RENAME COLUMN state_new TO state")
 
     conn.commit()
     conn.close()

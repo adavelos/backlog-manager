@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy import CheckConstraint, Float, ForeignKey, Integer, String, Text
+from sqlalchemy import Boolean, CheckConstraint, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base
@@ -44,6 +44,7 @@ class Release(Base):
     )
     name: Mapped[str] = mapped_column(String, nullable=False)
     state: Mapped[str] = mapped_column(String, nullable=False, default="PLANNED")
+    is_default: Mapped[bool] = mapped_column("isDefault", Boolean, nullable=False, default=False)
     description: Mapped[str] = mapped_column(Text, nullable=False, default="")
     start_date: Mapped[int | None] = mapped_column("startDate", Integer, nullable=True)
     end_date: Mapped[int | None] = mapped_column("endDate", Integer, nullable=True)
