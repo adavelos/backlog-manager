@@ -7,6 +7,7 @@ const options = [
   { v: 'MEDIUM', l: 'Medium', c: 'opt-medium' },
   { v: 'HIGH', l: 'High', c: 'opt-high' },
   { v: 'CRITICAL', l: 'Critical', c: 'opt-critical' },
+  { v: 'BLOCKER', l: 'Blocker', c: 'opt-blocker' },
 ]
 </script>
 

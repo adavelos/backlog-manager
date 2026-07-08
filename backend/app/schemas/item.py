@@ -5,6 +5,7 @@ from pydantic import Field, field_validator
 from app.schemas.common import CamelModel
 
 ItemState = Literal["BACKLOG", "TODO", "ONGOING", "DONE"]
+ItemPriority = Literal["LOW", "MEDIUM", "HIGH", "CRITICAL", "BLOCKER"]
 
 
 class Subitem(CamelModel):
@@ -18,7 +19,7 @@ class ItemCreate(CamelModel):
     project_id: str
     title: str = Field(min_length=1)
     state: ItemState = "BACKLOG"
-    priority: str | None = None
+    priority: ItemPriority | None = None
     type: str | None = None
     analysis: str | None = None
     prompt: str | None = None
@@ -29,7 +30,7 @@ class ItemCreate(CamelModel):
     sort_order: float | None = None
     release_id: str | None = None
 
-    @field_validator('priority')
+    @field_validator('priority', mode='before')
     @classmethod
     def normalize_priority(cls, v):
         return v.upper() if v else v
@@ -38,7 +39,7 @@ class ItemCreate(CamelModel):
 class ItemUpdate(CamelModel):
     title: str | None = Field(default=None, min_length=1)
     state: ItemState | None = None
-    priority: str | None = None
+    priority: ItemPriority | None = None
     type: str | None = None
     analysis: str | None = None
     prompt: str | None = None
@@ -49,7 +50,7 @@ class ItemUpdate(CamelModel):
     sort_order: float | None = None
     release_id: str | None = None
 
-    @field_validator('priority')
+    @field_validator('priority', mode='before')
     @classmethod
     def normalize_priority(cls, v):
         return v.upper() if v else v

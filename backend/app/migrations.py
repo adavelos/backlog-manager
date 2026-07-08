@@ -139,5 +139,22 @@ def init_db(db_path: Path) -> None:
         cursor.execute("ALTER TABLE releases DROP COLUMN state")
         cursor.execute("ALTER TABLE releases RENAME COLUMN state_new TO state")
 
+    # Constrain items.priority to the 5-level enum (adds BLOCKER); same
+    # shadow-column technique. Unrecognized legacy values normalize to NULL.
+    if not _has_check_constraint(cursor, "items", "CHECK (priority IS NULL OR priority IN"):
+        cursor.execute(
+            "ALTER TABLE items ADD COLUMN priority_new TEXT "
+            "CHECK (priority_new IS NULL OR priority_new IN "
+            "('LOW', 'MEDIUM', 'HIGH', 'CRITICAL', 'BLOCKER'))"
+        )
+        cursor.execute("""
+            UPDATE items SET priority_new = CASE
+                WHEN upper(priority) IN ('LOW', 'MEDIUM', 'HIGH', 'CRITICAL', 'BLOCKER') THEN upper(priority)
+                ELSE NULL
+            END
+        """)
+        cursor.execute("ALTER TABLE items DROP COLUMN priority")
+        cursor.execute("ALTER TABLE items RENAME COLUMN priority_new TO priority")
+
     conn.commit()
     conn.close()
