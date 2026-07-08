@@ -11,7 +11,7 @@ const emit = defineEmits(['close', 'create'])
 const nameInputRef = ref(null)
 const keyInputRef = ref(null)
 
-const form = reactive({ name: '', key: '', description: '' })
+const form = reactive({ name: '', key: '', description: '', repoPath: '' })
 const keyAutoFilled = ref(true)
 const keyError = ref('')
 
@@ -45,6 +45,7 @@ watch(
       form.name = ''
       form.key = ''
       form.description = ''
+      form.repoPath = ''
       keyAutoFilled.value = true
       keyError.value = ''
       nextTick(() => nameInputRef.value?.focus())
@@ -66,7 +67,7 @@ function create() {
     return
   }
 
-  emit('create', { name, description: form.description.trim(), key })
+  emit('create', { name, description: form.description.trim(), key, repoPath: form.repoPath.trim() })
 }
 </script>
 
@@ -102,6 +103,10 @@ function create() {
           <div class="if-field">
             <div class="if-label">Description</div>
             <textarea v-model="form.description" class="if-input if-textarea" rows="2" placeholder="Optional description…"></textarea>
+          </div>
+          <div class="if-field">
+            <div class="if-label">Repo path</div>
+            <input v-model="form.repoPath" class="if-input" type="text" placeholder="e.g. my-org/my-repo" @keydown.enter="create" />
           </div>
         </div>
       </div>
