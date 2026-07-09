@@ -958,3 +958,29 @@
 .add-subitem-btn:active {
   transform: scale(0.94);
 }
+
+/* --- Subitem Drag & Drop ---------------------------------------- */
+.subitem-handle {
+  flex-shrink: 0;
+  color: var(--text-muted);
+  cursor: grab;
+  padding: 0 2px;
+  user-select: none;
+  font-size: 10px;
+  letter-spacing: -2px;
+}
+
+.subitem-row:hover .subitem-handle {
+  color: var(--text-primary);
+}
+
+.subitem-row.dragging {
+  opacity: 0.5;
+  background: var(--slate-100);
+  border-radius: 4px;
+}
+
+.subitem-row.drag-over {
+  border-top: 2px solid var(--indigo-500);
+  padding-top: 1px;
+}

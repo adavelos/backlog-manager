@@ -8,6 +8,8 @@ const emit = defineEmits(['update:modelValue'])
 
 const { generateId } = useBacklogStore()
 const newTitle = ref('')
+const draggedIdx = ref(null)
+const dragOverIdx = ref(null)
 
 function toggleDone(idx) {
   const next = props.modelValue.slice()
@@ -28,6 +30,39 @@ function add() {
   emit('update:modelValue', [...props.modelValue, { id: 'si-' + generateId(), title, done: false }])
   newTitle.value = ''
 }
+
+function onDragStart(e, idx) {
+  draggedIdx.value = idx
+  e.dataTransfer.effectAllowed = 'move'
+  e.dataTransfer.setData('text/plain', String(idx))
+}
+
+function onDragOver(e, idx) {
+  e.preventDefault()
+  dragOverIdx.value = idx
+  e.dataTransfer.dropEffect = 'move'
+}
+
+function onDragLeave() {
+  dragOverIdx.value = null
+}
+
+function onDrop(e, targetIdx) {
+  e.preventDefault()
+  dragOverIdx.value = null
+  const sourceIdx = Number(e.dataTransfer.getData('text/plain'))
+  if (sourceIdx !== targetIdx && sourceIdx >= 0 && sourceIdx < props.modelValue.length) {
+    const next = props.modelValue.slice()
+    const [item] = next.splice(sourceIdx, 1)
+    next.splice(targetIdx, 0, item)
+    emit('update:modelValue', next)
+  }
+}
+
+function onDragEnd() {
+  draggedIdx.value = null
+  dragOverIdx.value = null
+}
 </script>
 
 <template>
@@ -37,8 +72,15 @@ function add() {
         v-for="(si, idx) in modelValue"
         :key="si.id || idx"
         class="subitem-row"
-        :class="{ done: si.done }"
+        :class="{ done: si.done, dragging: draggedIdx === idx, 'drag-over': dragOverIdx === idx }"
+        draggable="true"
+        @dragstart="onDragStart($event, idx)"
+        @dragover="onDragOver($event, idx)"
+        @dragleave="onDragLeave"
+        @drop="onDrop($event, idx)"
+        @dragend="onDragEnd"
       >
+        <span class="subitem-handle" title="Drag to reorder">⋮</span>
         <input type="checkbox" class="si-check" :checked="si.done" @change="toggleDone(idx)" />
         <span class="subitem-title">{{ si.title }}</span>
         <button class="manage-item-action danger si-del" style="opacity: 0.3" @click="remove(idx)">&times;</button>

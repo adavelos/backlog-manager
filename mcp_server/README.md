@@ -11,10 +11,10 @@ cd mcp_server
 uv sync
 ```
 
-By default the server talks to `http://localhost:8000/api`. Override with:
+By default the server talks to `http://localhost:8001/api` (matching the dev backend default port). Override with:
 
 ```bash
-export BACKLOG_API_BASE_URL=http://localhost:8000/api   # match your backend's port
+export BACKLOG_API_BASE_URL=http://localhost:8001/api   # match your backend's port
 export BACKLOG_API_TIMEOUT=10                            # seconds
 ```
 
