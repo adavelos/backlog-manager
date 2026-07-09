@@ -19,7 +19,7 @@ const router = useRouter()
 const view = ref('state') // "state" | "release"
 const quickEditMode = ref(false)
 const showArchivePanel = ref(false)
-const activePriorities = ref(new Set(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']))
+const activePriorities = ref(new Set(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL', 'BLOCKER']))
 const selectedReleaseIds = ref(new Set()) // filter by release; updated when project changes
 const searchQuery = ref('')
 const searchAllFields = ref(false)
@@ -52,7 +52,7 @@ function syncUrl() {
   if (state.currentProjectId !== 'ALL') query.project = state.currentProjectId
   if (state.activeProjectType !== 'work') query.type = state.activeProjectType
   if (state.activeTags.size > 0) query.tags = Array.from(state.activeTags).join(',')
-  if (activePriorities.value.size > 0 && activePriorities.value.size < 4) {
+  if (activePriorities.value.size > 0 && activePriorities.value.size < 5) {
     query.priorities = Array.from(activePriorities.value).join(',')
   }
   const currentProjectReleases = currentProject.value?.releases || []
@@ -72,12 +72,10 @@ function togglePriority(priority) {
 }
 
 function toggleAllPriorities() {
-  if (activePriorities.value.size === 4) {
-    // If all are selected, deselect all
+  if (activePriorities.value.size === 5) {
     activePriorities.value.clear()
   } else {
-    // Otherwise select all
-    activePriorities.value = new Set(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'])
+    activePriorities.value = new Set(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL', 'BLOCKER'])
   }
   syncUrl()
 }
@@ -206,9 +204,9 @@ const releaseColumns = computed(() => {
 // --- Quick edit groups ---
 
 function sortByPriority(items) {
-  const PRIORITIES = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']
+  const PRIORITIES = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL', 'BLOCKER']
   return items.slice().sort((a, b) => {
-    // First sort by priority (CRITICAL > HIGH > MEDIUM > LOW)
+    // First sort by priority (BLOCKER > CRITICAL > HIGH > MEDIUM > LOW)
     const pA = PRIORITIES.indexOf((a.priority || '').toUpperCase())
     const pB = PRIORITIES.indexOf((b.priority || '').toUpperCase())
     if (pA !== pB) return pB - pA
@@ -519,13 +517,13 @@ function createItemAndNew(payload) {
         <div class="view-buttons">
           <button
             class="view-button"
-            :class="{ active: activePriorities.size === 4 }"
+            :class="{ active: activePriorities.size === 5 }"
             @click="toggleAllPriorities"
           >
             All
           </button>
           <button
-            v-for="p in ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW']"
+            v-for="p in ['BLOCKER', 'CRITICAL', 'HIGH', 'MEDIUM', 'LOW']"
             :key="p"
             class="view-button"
             :class="{ active: activePriorities.has(p) }"

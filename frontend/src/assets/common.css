@@ -345,6 +345,13 @@ body {
   border-color: var(--red-100);
 }
 
+.badge.priority-BLOCKER {
+  background: var(--red-50);
+  color: var(--red-700);
+  border-color: var(--red-100);
+  font-weight: 700;
+}
+
 .badge.type-BUG {
   background: var(--rose-50);
   color: var(--rose-500);
