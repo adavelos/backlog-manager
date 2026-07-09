@@ -10,7 +10,7 @@ import { useBacklogStore } from '@/composables/useBacklogStore'
 import { useModal } from '@/composables/useModal'
 import * as projectsService from '@/services/projects.service'
 
-const { state, syncMutation, generateId } = useBacklogStore()
+const { state, syncMutation, generateId, loadAll } = useBacklogStore()
 const { showConfirm, showPrompt } = useModal()
 const route = useRoute()
 const router = useRouter()
@@ -20,7 +20,8 @@ const showAddProject = ref(false)
 const editingProjectId = ref(null)
 const editingReleaseId = ref(null)
 
-onMounted(() => {
+onMounted(async () => {
+  await loadAll()
   const q = route.query
   if (q.type) state.activeProjectType = q.type
   if (q.sel) selectedProjectId.value = q.sel

@@ -12,7 +12,7 @@ import { debounce } from '@/utils/debounce'
 import * as notesService from '@/services/notes.service'
 import * as scratchpadsService from '@/services/scratchpads.service'
 
-const { state, syncMutation, generateId } = useBacklogStore()
+const { state, syncMutation, generateId, loadAll } = useBacklogStore()
 const { showConfirm } = useModal()
 const route = useRoute()
 const router = useRouter()
@@ -25,7 +25,8 @@ const showConvertModal = ref(false)
 const scratchpadInputRef = ref(null)
 const noteTitleInputRef = ref(null)
 
-onMounted(() => {
+onMounted(async () => {
+  await loadAll()
   const q = route.query
   if (q.type) state.activeProjectType = q.type
   if (q.scratchpad) {

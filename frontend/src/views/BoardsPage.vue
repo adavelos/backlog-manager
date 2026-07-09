@@ -11,7 +11,7 @@ import { useBacklogStore } from '@/composables/useBacklogStore'
 import { useModal } from '@/composables/useModal'
 import * as itemsService from '@/services/items.service'
 
-const { state, syncMutation, generateId, visibleBoardItems, archivedItems, getTagsForProject } = useBacklogStore()
+const { state, syncMutation, generateId, visibleBoardItems, archivedItems, getTagsForProject, loadAll } = useBacklogStore()
 const { showConfirm, showPrompt } = useModal()
 const route = useRoute()
 const router = useRouter()
@@ -19,14 +19,20 @@ const router = useRouter()
 const view = ref('state') // "state" | "release"
 const quickEditMode = ref(false)
 const showArchivePanel = ref(false)
-const activePriorities = ref(new Set(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL', 'BLOCKER']))
+const PRIORITIES = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL', 'BLOCKER', 'NONE']
+const activePriorities = ref(new Set(PRIORITIES))
+
+function normalizedPriority(item) {
+  return item.priority ? item.priority.toUpperCase() : 'NONE'
+}
 const selectedReleaseIds = ref(new Set()) // filter by release; updated when project changes
 const searchQuery = ref('')
 const searchAllFields = ref(false)
 const openItemId = ref(null)
 const addItemTargetState = ref(null)
 
-onMounted(() => {
+onMounted(async () => {
+  await loadAll()
   const q = route.query
   if (q.view) view.value = q.view
   if (q.project) state.currentProjectId = q.project
@@ -52,7 +58,7 @@ function syncUrl() {
   if (state.currentProjectId !== 'ALL') query.project = state.currentProjectId
   if (state.activeProjectType !== 'work') query.type = state.activeProjectType
   if (state.activeTags.size > 0) query.tags = Array.from(state.activeTags).join(',')
-  if (activePriorities.value.size > 0 && activePriorities.value.size < 5) {
+  if (activePriorities.value.size > 0 && activePriorities.value.size < PRIORITIES.length) {
     query.priorities = Array.from(activePriorities.value).join(',')
   }
   const currentProjectReleases = currentProject.value?.releases || []
@@ -72,10 +78,10 @@ function togglePriority(priority) {
 }
 
 function toggleAllPriorities() {
-  if (activePriorities.value.size === 5) {
+  if (activePriorities.value.size === PRIORITIES.length) {
     activePriorities.value.clear()
   } else {
-    activePriorities.value = new Set(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL', 'BLOCKER'])
+    activePriorities.value = new Set(PRIORITIES)
   }
   syncUrl()
 }
@@ -184,7 +190,7 @@ const stateColumns = computed(() =>
   STATES.map((s) => ({
     id: s,
     label: s,
-    items: searchFilteredItems.value.filter((i) => i.state === s && activePriorities.value.has((i.priority || '').toUpperCase())),
+    items: searchFilteredItems.value.filter((i) => i.state === s && activePriorities.value.has(normalizedPriority(i))),
   })),
 )
 
@@ -196,7 +202,7 @@ const releaseColumns = computed(() => {
   return cols.map((c) => ({
     ...c,
     items: searchFilteredItems.value.filter(
-      (i) => (i.releaseId || 'NO_RELEASE') === c.id && activePriorities.value.has((i.priority || '').toUpperCase()),
+      (i) => (i.releaseId || 'NO_RELEASE') === c.id && activePriorities.value.has(normalizedPriority(i)),
     ),
   }))
 })
@@ -204,11 +210,11 @@ const releaseColumns = computed(() => {
 // --- Quick edit groups ---
 
 function sortByPriority(items) {
-  const PRIORITIES = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL', 'BLOCKER']
+  // Sort by priority (BLOCKER > CRITICAL > HIGH > MEDIUM > LOW > NONE)
+  const RANK = ['NONE', 'LOW', 'MEDIUM', 'HIGH', 'CRITICAL', 'BLOCKER']
   return items.slice().sort((a, b) => {
-    // First sort by priority (BLOCKER > CRITICAL > HIGH > MEDIUM > LOW)
-    const pA = PRIORITIES.indexOf((a.priority || '').toUpperCase())
-    const pB = PRIORITIES.indexOf((b.priority || '').toUpperCase())
+    const pA = RANK.indexOf(normalizedPriority(a))
+    const pB = RANK.indexOf(normalizedPriority(b))
     if (pA !== pB) return pB - pA
     // Then sort by sortOrder within same priority
     const aSort = a.sortOrder || 0
@@ -517,19 +523,19 @@ function createItemAndNew(payload) {
         <div class="view-buttons">
           <button
             class="view-button"
-            :class="{ active: activePriorities.size === 5 }"
+            :class="{ active: activePriorities.size === PRIORITIES.length }"
             @click="toggleAllPriorities"
           >
             All
           </button>
           <button
-            v-for="p in ['BLOCKER', 'CRITICAL', 'HIGH', 'MEDIUM', 'LOW']"
+            v-for="p in ['BLOCKER', 'CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'NONE']"
             :key="p"
             class="view-button"
             :class="{ active: activePriorities.has(p) }"
             @click="togglePriority(p)"
           >
-            {{ p }}
+            {{ p === 'NONE' ? 'No priority' : p }}
           </button>
         </div>
       </div>

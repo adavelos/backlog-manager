@@ -1,4 +1,13 @@
-<script setup></script>
+<script setup>
+import { onMounted } from 'vue'
+import { useBacklogStore } from '@/composables/useBacklogStore'
+
+const { loadAll } = useBacklogStore()
+
+onMounted(() => {
+  loadAll()
+})
+</script>
 
 <template>
   <div class="layout" style="display: flex; align-items: center; justify-content: center; gap: 24px; padding: 40px">

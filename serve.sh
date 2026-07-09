@@ -38,6 +38,14 @@ echo "Starting Backlog Manager on port $PORT..."
   nohup uv run uvicorn app.main:app --port "$PORT" > "$LOG_FILE" 2>&1 &
  echo $! > "$PID_FILE")
 
+sleep 2
+if ! kill -0 "$(cat "$PID_FILE" 2>/dev/null)" 2>/dev/null; then
+  echo "ERROR: Failed to start on port $PORT (port may be in use)."
+  echo "Last log lines:"
+  tail -5 "$LOG_FILE" 2>/dev/null || true
+  exit 1
+fi
+
 echo "Backlog Manager started in background (PID: $(cat "$PID_FILE"))"
 echo "Logs: $LOG_FILE"
 echo "Open: http://localhost:$PORT/"
