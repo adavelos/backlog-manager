@@ -98,8 +98,20 @@ const scopeProjects = computed(() =>
 
 const allTags = computed(() => getTagsForProject(state.currentProjectId))
 
+watch(allTags, (tags) => {
+  let changed = false
+  for (const tag of state.activeTags) {
+    if (!tags.includes(tag)) {
+      state.activeTags.delete(tag)
+      changed = true
+    }
+  }
+  if (changed) syncUrl()
+})
+
 function selectProject(id) {
   state.currentProjectId = id
+  state.activeTags.clear()
   selectedReleaseIds.value.clear() // reset release filter when project changes
   syncUrl()
 }
