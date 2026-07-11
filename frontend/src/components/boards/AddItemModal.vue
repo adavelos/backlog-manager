@@ -16,6 +16,11 @@ const emit = defineEmits(['close', 'create', 'create-and-new'])
 const { state } = useBacklogStore()
 
 const titleInputRef = ref(null)
+const maximized = ref(false)
+
+function toggleMaximize() {
+  maximized.value = !maximized.value
+}
 
 const form = reactive({
   projectId: null,
@@ -125,8 +130,24 @@ function saveAndNew() {
 
 <template>
   <div v-if="targetState" class="modal-overlay" @click.self="emit('close')">
-    <div class="modal-dialog">
-      <div class="modal-header">New {{ targetState }} item</div>
+    <div class="modal-dialog" :class="{ maximized }">
+      <div class="modal-header">
+        <span>New {{ targetState }} item</span>
+        <button class="modal-maximize-btn" :title="maximized ? 'Restore' : 'Maximize'" @click="toggleMaximize">
+          <svg v-if="maximized" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="4 14 10 14 10 20" />
+            <polyline points="20 10 14 10 14 4" />
+            <line x1="14" y1="10" x2="21" y2="3" />
+            <line x1="3" y1="21" x2="10" y2="14" />
+          </svg>
+          <svg v-else width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="15 3 21 3 21 9" />
+            <polyline points="9 21 3 21 3 15" />
+            <line x1="21" y1="3" x2="14" y2="10" />
+            <line x1="3" y1="21" x2="10" y2="14" />
+          </svg>
+        </button>
+      </div>
       <div class="modal-body">
         <div class="item-form">
           <div class="if-row" style="gap: 8px">
@@ -150,7 +171,7 @@ function saveAndNew() {
           </div>
           <div class="if-field">
             <div class="if-label">Analysis</div>
-            <textarea v-model="form.analysis" class="if-input if-textarea" rows="3" placeholder="Notes, analysis, context…"></textarea>
+            <textarea v-model="form.analysis" class="if-input if-textarea" rows="6" placeholder="Notes, analysis, context…"></textarea>
           </div>
           <div class="if-field">
             <div class="if-label-inline">

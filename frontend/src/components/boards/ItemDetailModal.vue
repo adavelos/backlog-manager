@@ -28,6 +28,11 @@ const form = reactive({
 })
 
 const titleInputRef = ref(null)
+const maximized = ref(false)
+
+function toggleMaximize() {
+  maximized.value = !maximized.value
+}
 
 function onKeydown(e) {
   if (e.key === 'Escape') emit('close')
@@ -97,15 +102,31 @@ function save() {
 
 <template>
   <div v-if="item" class="modal-overlay" @click.self="emit('close')">
-    <div class="modal-dialog">
+    <div class="modal-dialog" :class="{ maximized }">
       <div class="modal-header">
         <span>Edit item</span>
-        <button class="modal-prompt-btn" title="Copy AI prompt to clipboard" @click="copyPrompt">
+        <div style="display: flex; gap: 4px; align-items: center">
+          <button class="modal-maximize-btn" :title="maximized ? 'Restore' : 'Maximize'" @click="toggleMaximize">
+            <svg v-if="maximized" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="4 14 10 14 10 20" />
+              <polyline points="20 10 14 10 14 4" />
+              <line x1="14" y1="10" x2="21" y2="3" />
+              <line x1="3" y1="21" x2="10" y2="14" />
+            </svg>
+            <svg v-else width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="15 3 21 3 21 9" />
+              <polyline points="9 21 3 21 3 15" />
+              <line x1="21" y1="3" x2="14" y2="10" />
+              <line x1="3" y1="21" x2="10" y2="14" />
+            </svg>
+          </button>
+          <button class="modal-prompt-btn" title="Copy AI prompt to clipboard" @click="copyPrompt">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <rect x="8" y="2" width="8" height="4" rx="1" ry="1" />
             <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
           </svg>
         </button>
+      </div>
       </div>
       <div class="modal-body">
         <div class="item-detail-form">
@@ -138,7 +159,7 @@ function save() {
 
           <div class="if-field">
             <div class="if-label">Analysis</div>
-            <textarea v-model="form.analysis" class="if-input if-textarea" rows="3"></textarea>
+            <textarea v-model="form.analysis" class="if-input if-textarea" rows="6"></textarea>
           </div>
 
           <div class="if-field">
