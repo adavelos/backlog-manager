@@ -899,6 +899,38 @@
   padding: 4px 0;
 }
 
+/* --- Subitems (within item card) ---------------------------------- */
+.item-subitems {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  border-top: 1px solid var(--border-light, #eee);
+  padding-top: 6px;
+}
+
+.item-subitem {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  color: var(--text-secondary, #555);
+  line-height: 1.4;
+  padding: 1px 0;
+}
+
+.item-subitem input[type="checkbox"] {
+  margin: 0;
+  width: 12px;
+  height: 12px;
+  accent-color: var(--indigo-600);
+  flex-shrink: 0;
+}
+
+.item-subitem.done span {
+  text-decoration: line-through;
+  color: var(--text-muted, #999);
+}
+
 /* --- Subitems (within detail modal) ------------------------------ */
 .subitem-row {
   display: flex;

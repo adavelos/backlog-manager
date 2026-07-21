@@ -50,5 +50,11 @@ function onDragStart(e) {
       <span v-for="t in item.tags.slice(0, 3)" :key="t" class="tag-badge">{{ t }}</span>
       <span v-if="item.tags.length > 3" class="tag-badge">+{{ item.tags.length - 3 }}</span>
     </div>
+    <ul v-if="item.subitems && item.subitems.length > 0" class="item-subitems">
+      <li v-for="si in item.subitems" :key="si.id" :class="['item-subitem', { done: si.done }]">
+        <input type="checkbox" :checked="si.done" disabled />
+        <span>{{ si.title }}</span>
+      </li>
+    </ul>
   </div>
 </template>
