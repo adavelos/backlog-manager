@@ -1,0 +1,15 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "studywiki": {
+      "type": "local",
+      "command": ["uv", "run", "--project", "/home/adavelos/argonath/studywiki/mcp_server", "studywiki-mcp"],
+      "enabled": true
+    },
+    "backlog-manager": {
+      "type": "local",
+      "command": ["uv", "run", "--project", "/home/adavelos/pa/backlog-manager/mcp_server", "backlog-mcp"],
+      "enabled": true
+    }
+  }
+}

@@ -365,6 +365,24 @@
   overflow: hidden;
 }
 
+.notes-editor-body.is-dragging,
+.notes-editor-body.is-dragging * {
+  cursor: col-resize !important;
+  user-select: none;
+}
+
+.notes-editor-divider {
+  width: 5px;
+  cursor: col-resize;
+  background: var(--border-light);
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+
+.notes-editor-divider:hover {
+  background: var(--slate-400);
+}
+
 .note-content-input {
   flex: 1;
   min-width: 0;

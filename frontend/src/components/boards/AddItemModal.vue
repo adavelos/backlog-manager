@@ -6,6 +6,7 @@ import TypeRadios from './TypeRadios.vue'
 import TagInput from './TagInput.vue'
 import SubitemsEditor from './SubitemsEditor.vue'
 import { useBacklogStore } from '@/composables/useBacklogStore'
+import { onTabInsert } from '@/utils/insertTab'
 
 const props = defineProps({
   targetState: { type: String, default: null },
@@ -171,7 +172,7 @@ function saveAndNew() {
           </div>
           <div class="if-field">
             <div class="if-label">Analysis</div>
-            <textarea v-model="form.analysis" class="if-input if-textarea" rows="6" placeholder="Notes, analysis, context…"></textarea>
+            <textarea v-model="form.analysis" class="if-input if-textarea" rows="6" placeholder="Notes, analysis, context…" @keydown="onTabInsert"></textarea>
           </div>
           <div class="if-field">
             <div class="if-label-inline">
@@ -191,7 +192,7 @@ function saveAndNew() {
           </div>
           <div class="if-field">
             <div class="if-label">Prompt</div>
-            <textarea v-model="form.prompt" class="if-input if-textarea" rows="3" placeholder="AI prompt / instructions…"></textarea>
+            <textarea v-model="form.prompt" class="if-input if-textarea" rows="3" placeholder="AI prompt / instructions…" @keydown="onTabInsert"></textarea>
           </div>
           <div class="if-field">
             <div class="if-label">Files affected (comma-separated)</div>

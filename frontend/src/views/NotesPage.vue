@@ -1,5 +1,5 @@
 <script setup>
-import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { marked } from 'marked'
 
@@ -11,6 +11,7 @@ import { showToast } from '@/composables/useToast'
 import { debounce } from '@/utils/debounce'
 import * as notesService from '@/services/notes.service'
 import * as scratchpadsService from '@/services/scratchpads.service'
+import { onTabInsert } from '@/utils/insertTab'
 
 const { state, syncMutation, generateId, loadAll } = useBacklogStore()
 const { showConfirm } = useModal()
@@ -24,6 +25,34 @@ const noteContent = ref('')
 const showConvertModal = ref(false)
 const scratchpadInputRef = ref(null)
 const noteTitleInputRef = ref(null)
+const editorBodyRef = ref(null)
+const editorRatio = ref(50)
+const isDragging = ref(false)
+
+function onDividerMousedown(e) {
+  e.preventDefault()
+  isDragging.value = true
+  document.addEventListener('mousemove', onDividerMousemove)
+  document.addEventListener('mouseup', onDividerMouseup)
+}
+
+function onDividerMousemove(e) {
+  if (!isDragging.value || !editorBodyRef.value) return
+  const rect = editorBodyRef.value.getBoundingClientRect()
+  const pct = ((e.clientX - rect.left) / rect.width) * 100
+  editorRatio.value = Math.min(85, Math.max(15, pct))
+}
+
+function onDividerMouseup() {
+  isDragging.value = false
+  document.removeEventListener('mousemove', onDividerMousemove)
+  document.removeEventListener('mouseup', onDividerMouseup)
+}
+
+onUnmounted(() => {
+  document.removeEventListener('mousemove', onDividerMousemove)
+  document.removeEventListener('mouseup', onDividerMouseup)
+})
 
 onMounted(async () => {
   await loadAll()
@@ -247,14 +276,17 @@ function doConvert({ projectId, title, keepScratchpad }) {
             <button class="btn-inline" @click="saveNoteNow">Save</button>
             <button class="btn-inline" @click="deleteCurrentNote">Delete</button>
           </div>
-          <div class="notes-editor-body">
+          <div ref="editorBodyRef" class="notes-editor-body" :class="{ 'is-dragging': isDragging }">
             <textarea
               v-model="noteContent"
               class="note-content-input"
+              :style="{ flex: editorRatio }"
               placeholder="Write Markdown notes here..."
               @input="onContentInput"
+              @keydown="onTabInsert"
             ></textarea>
-            <div class="note-preview" v-html="notePreviewHtml"></div>
+            <div class="notes-editor-divider" @mousedown="onDividerMousedown"></div>
+            <div class="note-preview" :style="{ flex: 100 - editorRatio }" v-html="notePreviewHtml"></div>
           </div>
         </div>
 
@@ -270,6 +302,7 @@ function doConvert({ projectId, title, keepScratchpad }) {
               placeholder="Jot something down..."
               :value="scratchpad.content"
               @input="onScratchpadInput"
+              @keydown="onTabInsert"
             ></textarea>
           </div>
           <div class="scratchpad-footer">

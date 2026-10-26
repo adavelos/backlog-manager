@@ -7,6 +7,7 @@ import TagInput from './TagInput.vue'
 import SubitemsEditor from './SubitemsEditor.vue'
 import { useBacklogStore } from '@/composables/useBacklogStore'
 import { showToast } from '@/composables/useToast'
+import { onTabInsert } from '@/utils/insertTab'
 
 const props = defineProps({ item: { type: Object, default: null } })
 const emit = defineEmits(['close', 'save', 'delete'])
@@ -159,7 +160,7 @@ function save() {
 
           <div class="if-field">
             <div class="if-label">Analysis</div>
-            <textarea v-model="form.analysis" class="if-input if-textarea" rows="6"></textarea>
+            <textarea v-model="form.analysis" class="if-input if-textarea" rows="6" @keydown="onTabInsert"></textarea>
           </div>
 
           <div class="if-field">
@@ -183,12 +184,12 @@ function save() {
 
           <div class="if-field">
             <div class="if-label">Prompt</div>
-            <textarea v-model="form.prompt" class="if-input if-textarea" rows="3"></textarea>
+            <textarea v-model="form.prompt" class="if-input if-textarea" rows="3" @keydown="onTabInsert"></textarea>
           </div>
 
           <div class="if-field">
             <div class="if-label">Report</div>
-            <textarea v-model="form.report" class="if-input if-textarea" rows="3"></textarea>
+            <textarea v-model="form.report" class="if-input if-textarea" rows="3" @keydown="onTabInsert"></textarea>
           </div>
 
           <div class="if-field">
