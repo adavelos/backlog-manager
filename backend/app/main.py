@@ -63,6 +63,11 @@ def get_config():
     }
 
 
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
+
 # Prod mode: serve the built Vue SPA from the configured static dir, falling
 # back to index.html for any path that isn't a real static asset so Vue
 # Router's history mode works on a hard refresh (e.g. GET /boards).

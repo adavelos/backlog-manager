@@ -34,3 +34,4 @@ __pycache__/
 
 # Frontend build output
 frontend/dist/
+.test-data/

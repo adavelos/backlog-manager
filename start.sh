@@ -8,10 +8,10 @@ SCRIPT_DIR="$(dirname "$0")"
 BACKEND_DIR="$SCRIPT_DIR/backend"
 FRONTEND_DIR="$SCRIPT_DIR/frontend"
 
-# Load port configuration from .env
-if [ -f "$SCRIPT_DIR/.env" ]; then
+# Load port configuration from .env.dev
+if [ -f "$SCRIPT_DIR/.env.dev" ]; then
   set -a
-  source "$SCRIPT_DIR/.env"
+  source "$SCRIPT_DIR/.env.dev"
   set +a
 fi
 
