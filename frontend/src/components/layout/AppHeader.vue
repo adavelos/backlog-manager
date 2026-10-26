@@ -2,13 +2,15 @@
 import { useBacklogStore } from '@/composables/useBacklogStore'
 
 const { state, toggleProjectType } = useBacklogStore()
+// Relative to the app's own location, so it works under a path prefix.
+const iconUrl = new URL('img/icon.svg', document.baseURI).pathname
 </script>
 
 <template>
   <header class="app-header">
     <div class="app-brand">
       <div>
-        <img src="/img/icon.svg" alt="Backlog Manager" width="22" height="22" />
+        <img :src="iconUrl" alt="Backlog Manager" width="22" height="22" />
       </div>
       <div class="app-title">Backlog Manager</div>
     </div>

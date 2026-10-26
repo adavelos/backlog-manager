@@ -8,6 +8,8 @@ const apiProxyTarget = `http://localhost:${backendPort}`
 
 // https://vite.dev/config/
 export default defineConfig({
+  // Relative asset links, so the built app works under any path prefix (the gateway strips it).
+  base: './',
   plugins: [vue()],
   resolve: {
     alias: {

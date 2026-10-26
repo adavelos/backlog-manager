@@ -2,6 +2,8 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+Shared standards for this application: `/home/adavelos/pa/foundation/standards/STACK.md`.
+
 ## ⚠️ AGENTIC SAFETY: READ FIRST
 
 **This is a production app with live local data at `~/.backlog/data/backlog.sqlite3`**

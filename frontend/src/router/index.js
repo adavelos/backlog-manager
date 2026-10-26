@@ -14,7 +14,8 @@ const routes = [
 ]
 
 const router = createRouter({
-  history: createWebHistory(),
+  // The app's own directory, so routes work at the root and under a path prefix.
+  history: createWebHistory(new URL('.', document.baseURI).pathname),
   routes,
   scrollBehavior(to, from, savedPosition) {
     return savedPosition || { top: 0 }
