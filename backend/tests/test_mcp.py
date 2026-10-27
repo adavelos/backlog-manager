@@ -169,6 +169,50 @@ async def test_create_refuses_bad_input_and_unknown_project(sm):
     assert item_count(sm) == before
 
 
+def project_count(sm) -> int:
+    with sm() as s:
+        return s.scalar(select(func.count()).select_from(Project))
+
+
+@pytest.mark.anyio
+async def test_create_project_preview_saves_nothing_and_confirm_saves(sm):
+    mcp = build_mcp(sm)
+    before = project_count(sm)
+    args = {"new_id": "proj-2", "name": "Argonath site", "key": "ARG", "type": "argonath"}
+    async with Client(mcp) as c:
+        assert "create_project" in {t.name for t in (await c.list_tools()).tools}
+
+        preview = content(await c.call_tool("create_project", args))
+        assert preview["saved"] is False
+        assert preview["would_save"]["type"] == "argonath" and preview["would_save"]["key"] == "ARG"
+        assert project_count(sm) == before
+
+        # A code for another group is refused, and nothing is saved.
+        other = await c.call_tool("create_project", {**args, "type": "work", "confirm": preview["confirm"]})
+        assert other.is_error
+        assert project_count(sm) == before
+
+        out = content(await c.call_tool("create_project", {**args, "confirm": preview["confirm"]}))
+        assert out["saved"] is True and out["name"] == "Argonath site"
+        assert project_count(sm) == before + 1
+        with sm() as s:
+            assert s.get(Project, "proj-2").type == "argonath"
+
+
+@pytest.mark.anyio
+async def test_create_project_refuses_bad_group_key_and_repeat_key(sm):
+    mcp = build_mcp(sm)
+    before = project_count(sm)
+    async with Client(mcp) as c:
+        bad_group = await c.call_tool("create_project", {"new_id": "p1", "name": "x", "key": "XYZ", "type": "personal"})
+        assert bad_group.is_error
+        bad_key = await c.call_tool("create_project", {"new_id": "p2", "name": "x", "key": "toolong", "type": "work"})
+        assert bad_key.is_error
+        taken_key = await c.call_tool("create_project", {"new_id": "p3", "name": "x", "key": "BLG", "type": "work"})
+        assert taken_key.is_error
+    assert project_count(sm) == before
+
+
 @pytest.mark.anyio
 async def test_update_preview_shows_before_and_after_and_saves_nothing(sm):
     mcp = build_mcp(sm)

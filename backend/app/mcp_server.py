@@ -1,4 +1,4 @@
-"""MCP server: the tools Claude uses to read the backlog and to add or change items.
+"""MCP server: the tools Claude uses to read the backlog and to add or change projects and items.
 
 Served over Streamable HTTP at /mcp, inside the web application. Each client sends its own bearer
 token (BACKLOG_MCP_TOKENS), or a token from the owner's Authelia login (OAuth, see mcp_oauth.py).
@@ -13,7 +13,7 @@ import logging
 import secrets
 import time
 from collections.abc import Callable
-from typing import Any
+from typing import Any, Literal
 
 from mcp.server.mcpserver import MCPServer
 from mcp.server.mcpserver.exceptions import ToolError
@@ -27,7 +27,7 @@ from app.mcp_oauth import OAuthAuthenticator
 from app.repositories.item_repo import item_repo, item_to_out
 from app.repositories.project_repo import project_repo
 from app.schemas.item import ItemCreate, ItemUpdate
-from app.schemas.project import ProjectOut
+from app.schemas.project import ProjectCreate, ProjectOut
 
 log = logging.getLogger("backlog.mcp")
 
@@ -36,11 +36,12 @@ INSTRUCTIONS = """The backlog manager: projects hold releases and items (tickets
 files affected, and text fields (analysis, prompt, report).
 - Start with list_projects to get the project and release ids. Then use list_items, get_candidate_items
   (the open items to pick up next, ranked) or get_item.
-- For new items, choose a fresh id (a UUID) yourself and pass it as new_id. Use the same id in the
-  preview and in the confirmed call.
+- For new items and projects, choose a fresh id (a UUID) yourself and pass it as new_id. Use the same id in
+  the preview and in the confirmed call.
+- A project belongs to one group: "work" or "argonath". Ask the owner which group before creating a project.
 - Nothing can be deleted through these tools. Ask the owner to delete in the web app.
 
-EVERY CHANGE NEEDS THE OWNER'S CONFIRMATION. The write tools (create_item, update_item) work in two steps:
+EVERY CHANGE NEEDS THE OWNER'S CONFIRMATION. The write tools (create_project, create_item, update_item) work in two steps:
 1. Call the tool without `confirm`. Nothing is saved. You get `would_save` (for an update: the item before
    and after) and a `confirm` code.
 2. Show the owner the change in plain words and ask for confirmation.
@@ -158,6 +159,33 @@ def build_mcp(sm: sessionmaker[Session], confirm_ttl: float = 900) -> MCPServer:
         return run(fn)
 
     # ----- write tools (two steps: preview, then confirm) -----
+
+    @mcp.tool(annotations=write)
+    def create_project(
+        new_id: str,
+        name: str,
+        key: str,
+        type: Literal["work", "argonath"],
+        description: str | None = None,
+        repo_path: str | None = None,
+        confirm: str | None = CONFIRM_FIELD,
+    ) -> dict:
+        """WRITE (two steps: preview, then confirm after the owner's yes). Create a project. The owner must say
+        which group it goes in: type "work" or "argonath". key is 1 to 3 characters, A-Z or 0-9, and must not be
+        used by another project. repo_path is optional (the git repo's org/repo slug or path)."""
+        args = {
+            "new_id": new_id, "name": name, "key": key, "type": type,
+            "description": description, "repo_path": repo_path,
+        }
+
+        def fn(s: Session):
+            data = ProjectCreate(
+                id=new_id, name=name, key=key, type=type,
+                description=description or "", repo_path=repo_path or "",
+            )
+            return ProjectOut.model_validate(project_repo.create(s, data)).model_dump(mode="json", by_alias=True)
+
+        return guarded("create_project", args, confirm, fn)
 
     @mcp.tool(annotations=write)
     def create_item(
