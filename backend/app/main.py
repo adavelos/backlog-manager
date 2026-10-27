@@ -1,17 +1,33 @@
+import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse
+from starlette.routing import Route
 
 from app.config import settings
 from app.db import SessionLocal
 from app.errors import ConflictError, NotFoundError
+from app.mcp_oauth import OAuthAuthenticator, OAuthSettings
+from app.mcp_server import attach_mcp, mcp_gate
 from app.migrations import init_db
 from app.models import Scratchpad
 from app.routers import backlog, items, notes, projects, releases, scratchpads
 
 BACKEND_DIR = Path(__file__).resolve().parent.parent
+
+_split = lambda v: [x.strip() for x in v.split(",") if x.strip()]  # noqa: E731
+_oauth = None
+if settings.oauth_issuer:
+    if not (settings.oauth_resource and settings.oauth_jwks_url):
+        raise ValueError("BACKLOG_OAUTH_RESOURCE and BACKLOG_OAUTH_JWKS_URL are required with BACKLOG_OAUTH_ISSUER")
+    _oauth = OAuthAuthenticator(OAuthSettings(settings.oauth_issuer, settings.oauth_resource, settings.oauth_jwks_url))
+_tokens = settings.token_map()
+if not _tokens and _oauth is None:
+    logging.getLogger("backlog.mcp").warning("No MCP tokens and no OAuth issuer: every /mcp request is refused")
+
+_tokens_gate = mcp_gate(_tokens, _oauth)
 
 
 def seed_scratchpads() -> None:
@@ -26,7 +42,10 @@ def seed_scratchpads() -> None:
 async def lifespan(_app: FastAPI):
     init_db(settings.db_path)
     seed_scratchpads()
-    yield
+    # The MCP session manager runs for the life of this process (see mcp_server.attach_mcp).
+    mcp = attach_mcp(_tokens_gate, SessionLocal, _split(settings.mcp_allowed_hosts), _split(settings.mcp_allowed_origins))
+    async with mcp.session_manager.run():
+        yield
 
 
 app = FastAPI(title="Backlog Manager API", lifespan=lifespan)
@@ -51,6 +70,15 @@ app.include_router(releases.router)
 app.include_router(items.router)
 app.include_router(notes.router)
 app.include_router(scratchpads.router)
+
+# MCP endpoint, ahead of the SPA routes so that POST /mcp is not taken by the catch-all.
+app.router.routes.insert(0, Route("/mcp", endpoint=_tokens_gate))
+
+# Protected resource metadata (RFC 9728). The gateway serves it at the well-known address of the public MCP address.
+if _oauth:
+    @app.get("/.well-known/oauth-protected-resource", include_in_schema=False)
+    def protected_resource():
+        return _oauth.metadata()
 
 
 @app.get("/api/config")

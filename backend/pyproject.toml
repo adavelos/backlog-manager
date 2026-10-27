@@ -6,7 +6,9 @@ requires-python = ">=3.12"
 dependencies = [
     "alembic>=1.18.5",
     "fastapi>=0.139.0",
+    "mcp>=2.3,<3",
     "pydantic-settings>=2.14.2",
+    "pyjwt[crypto]>=2.7",
     "sqlalchemy>=2.0.51",
     "uvicorn[standard]>=0.50.0",
 ]

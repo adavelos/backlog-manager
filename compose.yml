@@ -1,0 +1,30 @@
+# Backlog Manager in production: one container on the shared pa-edge network, reached by the gateway at /bm/.
+# The database is the server's copy in ./data (mounted at /data). The gateway owns the login; the MCP
+# endpoint (/mcp) checks its own tokens and Authelia's OAuth tokens. Secrets live only on the server,
+# in .env.prod.secrets (never committed).
+services:
+  backlog:
+    build: .
+    image: backlog:local
+    container_name: backlog
+    restart: unless-stopped
+    expose:
+      - "8000"
+    env_file:
+      - .env.prod
+      - .env.prod.secrets
+    volumes:
+      - ./data:/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      pa-edge:
+        aliases:
+          - backlog-manager
+
+networks:
+  pa-edge:
+    external: true

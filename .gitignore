@@ -35,3 +35,6 @@ __pycache__/
 # Frontend build output
 frontend/dist/
 .test-data/
+
+# Production secrets (server only): *.secrets
+*.secrets
