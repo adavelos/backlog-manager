@@ -38,3 +38,7 @@ frontend/dist/
 
 # Production secrets (server only): *.secrets
 *.secrets
+
+# Local agent settings and run state
+.claude/settings.local.json
+.run/

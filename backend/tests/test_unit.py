@@ -54,3 +54,17 @@ def test_item_create_rejects_an_unknown_state():
 def test_item_priority_is_normalised_to_upper_case():
     item = ItemCreate(id="i-1", project_id="p-1", title="x", priority="high")
     assert item.priority == "HIGH"
+
+
+def test_static_file_inside_refuses_paths_outside_the_static_folder(tmp_path):
+    from app.main import static_file_inside
+
+    static = tmp_path / "dist"
+    static.mkdir()
+    (static / "app.js").write_text("ok")
+    (tmp_path / "secret.txt").write_text("secret")
+
+    assert static_file_inside(static, "app.js") == (static / "app.js").resolve()
+    assert static_file_inside(static, "missing.js") is None
+    assert static_file_inside(static, "../secret.txt") is None
+    assert static_file_inside(static, str(tmp_path / "secret.txt")) is None

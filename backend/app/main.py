@@ -96,6 +96,15 @@ def health():
     return {"status": "ok"}
 
 
+def static_file_inside(static_dir: Path, request_path: str) -> Path | None:
+    """The file `request_path` names inside `static_dir`, or None when it is missing or escapes the folder."""
+    root = static_dir.resolve()
+    candidate = (root / request_path).resolve()
+    if candidate.is_relative_to(root) and candidate.is_file():
+        return candidate
+    return None
+
+
 # Prod mode: serve the built Vue SPA from the configured static dir, falling
 # back to index.html for any path that isn't a real static asset so Vue
 # Router's history mode works on a hard refresh (e.g. GET /boards).
@@ -105,7 +114,7 @@ if settings.static_dir is not None:
 
     @app.get("/{full_path:path}")
     def spa_fallback(full_path: str):
-        candidate = settings.static_dir / full_path
-        if candidate.is_file():
+        candidate = static_file_inside(settings.static_dir, full_path)
+        if candidate is not None:
             return FileResponse(candidate)
         return FileResponse(settings.static_dir / "index.html")

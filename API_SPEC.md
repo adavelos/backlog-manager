@@ -1,7 +1,7 @@
 # Backlog Manager API Specification
 
 **Version**: 1.0.0  
-**Base URL**: `http://localhost:8000/api` (development) or `http://localhost:3000/api` (production)
+**Base URL**: `http://localhost:8001/api` (`./make.sh dev` and `./make.sh serve`; port from `BACKLOG_BACKEND_PORT` in `.env.dev`); `/bm/api` through the gateway
 
 ---
 
@@ -648,7 +648,7 @@ import requests
 import json
 from datetime import datetime
 
-BASE_URL = "http://localhost:8000/api"
+BASE_URL = "http://localhost:8001/api"
 
 # Create a project
 project_data = {
@@ -698,7 +698,7 @@ print(f"Found {len(items)} items")
 ### JavaScript/Node.js Example
 
 ```javascript
-const BASE_URL = "http://localhost:8000/api";
+const BASE_URL = "http://localhost:8001/api";
 
 async function createProject() {
   const response = await fetch(`${BASE_URL}/projects`, {
@@ -751,7 +751,7 @@ async function listItems(projectId) {
 
 ```bash
 # Create a project
-curl -X POST http://localhost:8000/api/projects \
+curl -X POST http://localhost:8001/api/projects \
   -H "Content-Type: application/json" \
   -d '{
     "id": "my-project",
@@ -760,7 +760,7 @@ curl -X POST http://localhost:8000/api/projects \
   }'
 
 # Create a release
-curl -X POST http://localhost:8000/api/projects/my-project/releases \
+curl -X POST http://localhost:8001/api/projects/my-project/releases \
   -H "Content-Type: application/json" \
   -d '{
     "id": "v1.0",
@@ -769,7 +769,7 @@ curl -X POST http://localhost:8000/api/projects/my-project/releases \
   }'
 
 # Create an item
-curl -X POST http://localhost:8000/api/items \
+curl -X POST http://localhost:8001/api/items \
   -H "Content-Type: application/json" \
   -d '{
     "id": "item-1",
@@ -779,10 +779,10 @@ curl -X POST http://localhost:8000/api/items \
   }'
 
 # List items in a project
-curl "http://localhost:8000/api/items?projectId=my-project"
+curl "http://localhost:8001/api/items?projectId=my-project"
 
 # Update an item
-curl -X PATCH http://localhost:8000/api/items/item-1 \
+curl -X PATCH http://localhost:8001/api/items/item-1 \
   -H "Content-Type: application/json" \
   -d '{"state": "DONE"}'
 ```
@@ -815,7 +815,7 @@ import requests
 import uuid
 from datetime import datetime
 
-BASE_URL = "http://localhost:8000/api"
+BASE_URL = "http://localhost:8001/api"
 
 def generate_id(prefix):
     """Generate a unique ID."""
