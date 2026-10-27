@@ -28,7 +28,7 @@ function openBoard(type) {
   state.activeProjectType = type
   state.currentProjectId = 'ALL'
   state.activeTags = new Set()
-  router.push({ name: 'mobile-board', query: { type } })
+  router.push({ name: 'boards', query: { type } })
 }
 
 onMounted(() => {

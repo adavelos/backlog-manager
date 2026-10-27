@@ -103,7 +103,7 @@ onMounted(async () => {
 <template>
   <main class="m-screen m-board-screen">
     <header class="m-topbar">
-      <router-link to="/m" class="m-back" aria-label="Back to project groups">‹</router-link>
+      <router-link to="/" class="m-back" aria-label="Back to project groups">‹</router-link>
       <div class="m-segmented" role="group" aria-label="Project group">
         <button
           v-for="t in TYPES"
