@@ -4,6 +4,7 @@ import '@/assets/common.css'
 import '@/assets/boards.css'
 import '@/assets/projects.css'
 import '@/assets/notes.css'
+import '@/assets/mobile.css'
 
 import App from './App.vue'
 import router from './router'
