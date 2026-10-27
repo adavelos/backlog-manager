@@ -68,3 +68,13 @@ def test_static_file_inside_refuses_paths_outside_the_static_folder(tmp_path):
     assert static_file_inside(static, "missing.js") is None
     assert static_file_inside(static, "../secret.txt") is None
     assert static_file_inside(static, str(tmp_path / "secret.txt")) is None
+
+
+def test_index_with_base_points_deep_links_back_to_the_app_root():
+    from app.main import index_with_base
+
+    page = "<html><head></head></html>"
+    assert index_with_base(page, "") == '<html><head><base href="./"></head></html>'
+    assert index_with_base(page, "boards") == '<html><head><base href="./"></head></html>'
+    assert index_with_base(page, "boards/3") == '<html><head><base href="../"></head></html>'
+    assert index_with_base(page, "boards/3/items/") == '<html><head><base href="../../../"></head></html>'

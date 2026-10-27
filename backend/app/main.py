@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, Request
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from starlette.routing import Route
 
 from app.config import settings
@@ -105,6 +105,13 @@ def static_file_inside(static_dir: Path, request_path: str) -> Path | None:
     return None
 
 
+def index_with_base(index_html: str, request_path: str) -> str:
+    """index.html with a relative <base> back to the app root, for a deep link such as boards/3.
+    Without it the page's relative links (./assets, api/) resolve under the deep link's folder."""
+    base = "../" * request_path.count("/") or "./"
+    return index_html.replace("<head>", f'<head><base href="{base}">', 1)
+
+
 # Prod mode: serve the built Vue SPA from the configured static dir, falling
 # back to index.html for any path that isn't a real static asset so Vue
 # Router's history mode works on a hard refresh (e.g. GET /boards).
@@ -117,4 +124,5 @@ if settings.static_dir is not None:
         candidate = static_file_inside(settings.static_dir, full_path)
         if candidate is not None:
             return FileResponse(candidate)
-        return FileResponse(settings.static_dir / "index.html")
+        index_html = (settings.static_dir / "index.html").read_text(encoding="utf-8")
+        return HTMLResponse(index_with_base(index_html, full_path))
