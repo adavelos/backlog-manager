@@ -16,7 +16,7 @@ The shared rules it follows are in the foundation: [STACK.md](../foundation/stan
 - `Implemented`: MCP server at `/mcp`, inside the web application, with read tools `list_projects`, `list_items`, `get_candidate_items`, `get_item` and write tools `create_project`, `create_item`, `update_item`. There is no delete tool.
 - `Implemented`: container image and `compose.yml`; `./make.sh` for every action.
 - `Deployed`: the application runs on the server as service and container `backlog` (healthy at the status check of 2026-10-27), and the claude.ai connector works through OAuth with Authelia. The deployed commit is `Not verified`.
-- `Not verified`: the nightly server backup (crontab). See [Backup and restore](#backup-and-restore).
+- `Verified` 2026-10-27: the nightly backup (03:30, `app-backup.sh backlog`) is in root's crontab, and the newest backup (`backlog_2026-10-27_12-57-36.sqlite3`) was downloaded and passed `ops/sqlite-restore-check.py`. See [Backup and restore](#backup-and-restore).
 
 ## Quick start
 
@@ -87,12 +87,12 @@ claude mcp add --transport http backlog https://seansoul.gr/bm/mcp --header "Aut
 
 Server side (the database is `/data/backlog.sqlite3` in the container):
 
-1. `./make.sh deploy install-backup` adds the nightly backup (03:30 server time) to root's crontab, once. `Not verified`: that it is installed.
+1. `./make.sh deploy install-backup` adds the nightly backup (03:30 server time) to root's crontab, once. It is installed (checked 2026-10-27).
 2. `./make.sh deploy backup` runs a backup now.
 3. `./make.sh deploy fetch-backup` downloads the newest one to `data/backups/server/`.
 4. `python3 ../foundation/ops/sqlite-restore-check.py data/backups/server/<file>` checks that the copy opens and passes the integrity check.
 
-The server used the foundation script `ops/backlog-manager-backup.sh`, which writes inside the container where `/backups` is not mounted, so it does not work. The application moves to the shared `ops/app-backup.sh`. To switch, the owner runs `./make.sh deploy sync` and `./make.sh deploy install-backup` once (`Not verified`: not yet run).
+The server uses the shared `ops/app-backup.sh` (checked 2026-10-27). The older `ops/backlog-manager-backup.sh`, which wrote inside the container where `/backups` is not mounted, is no longer in the crontab and is removed from the foundation.
 
 Local side: `./make.sh backup` writes `~/.backlog/backups/backlog-<timestamp>.sqlite3`, using the SQLite backup API (safe with the WAL file), runs `PRAGMA integrity_check` on the copy, and keeps the newest 14. Run it before a schema change.
 
